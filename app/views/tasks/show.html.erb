@@ -1,0 +1,15 @@
+<div id="react-task-show"></div>
+
+<script type="module">
+  import React from "react"
+  import { createRoot } from "react-dom/client"
+  import TaskShow from "components/TaskShow"
+  
+  const task = <%= raw @task.to_json %>
+  const container = document.getElementById('react-task-show')
+  
+  if (container) {
+    const root = createRoot(container)
+    root.render(React.createElement(TaskShow, { task: task }))
+  }
+</script>

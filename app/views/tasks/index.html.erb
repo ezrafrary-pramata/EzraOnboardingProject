@@ -1,0 +1,36 @@
+
+
+
+<%= link_to "Log in", new_session_path unless authenticated? %>
+
+<h1>TaskTracker</h1>
+
+<div id="react-new-task"></div>
+
+
+<div id="react-task-list"></div>
+
+<script type="module">
+  import React from "react"
+  import { createRoot } from "react-dom/client"
+  import TaskList from "components/TaskList"
+  import NewTask from "components/NewTask"
+
+
+  <% if authenticated? %>
+    const newTaskContainer = document.getElementById('react-new-task')
+    if (newTaskContainer) {
+      const root = createRoot(newTaskContainer)
+      root.render(React.createElement(NewTask))
+    }
+  <% end %>
+  
+  const tasks = <%= raw @tasks.to_json %>
+  const container = document.getElementById('react-task-list')
+  
+  if (container) {
+    const root = createRoot(container)
+    root.render(React.createElement(TaskList, { tasks: tasks }))
+  }
+</script>
+

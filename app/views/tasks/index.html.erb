@@ -1,13 +1,10 @@
-
-
-
 <%= link_to "Log in", new_session_path unless authenticated? %>
 
 <h1>TaskTracker</h1>
+<p>Welcome, <%= Current.user.email_address %></p>
+<p>Organization: <%= Current.user.organization&.name || "No organization assigned" %></p>
 
 <div id="react-new-task"></div>
-
-
 <div id="react-task-list"></div>
 
 <script type="module">
@@ -15,7 +12,6 @@
   import { createRoot } from "react-dom/client"
   import TaskList from "components/TaskList"
   import NewTask from "components/NewTask"
-
 
   <% if authenticated? %>
     const newTaskContainer = document.getElementById('react-new-task')
@@ -33,4 +29,3 @@
     root.render(React.createElement(TaskList, { tasks: tasks }))
   }
 </script>
-

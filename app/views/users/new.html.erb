@@ -1,0 +1,19 @@
+<%= tag.div(flash[:alert], style: "color:red") if flash[:alert] %>
+<%= tag.div(flash[:notice], style: "color:green") if flash[:notice] %>
+
+<h2>Create New User</h2>
+
+<%= form_with model: @user do |form| %>
+  <%= form.email_field :email_address, required: true, autofocus: true, autocomplete: "username", placeholder: "Enter email address" %><br><br>
+  
+  <%= form.password_field :password, required: true, autocomplete: "new-password", placeholder: "Enter password", maxlength: 72 %><br><br>
+  
+  <%= form.collection_select :organization_id, @organizations, :id, :name, 
+      { prompt: "Select an organization" }, 
+      { required: true } %><br><br>
+  
+  <%= form.submit "Create User" %>
+<% end %>
+
+<br>
+<%= link_to "Back to Sign In", new_session_path %>

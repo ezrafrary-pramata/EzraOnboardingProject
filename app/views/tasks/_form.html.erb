@@ -1,31 +1,17 @@
-<%= form_with(model: task, local: true) do |form| %>
-    <% if task.errors.any? %>
-      <div id="error_explanation">
-        <h2><%= pluralize(task.errors.count, "error") %> prohibited this task from being saved:</h2>
-        <ul>
-          <% task.errors.full_messages.each do |message| %>
-            <li><%= message %></li>
-          <% end %>
-        </ul>
-      </div>
-    <% end %>
-  
-    <div class="field">
-      <%= form.label :name %>
-      <%= form.text_field :name %>
-    </div>
-  
-    <div class="field">
-      <%= form.label :description %>
-      <%= form.text_area :description, rows: 4 %>
-    </div>
-  
-    <div class="field">
-      <%= form.label :due_date, "Due Date & Time (optional)" %>
-      <%= form.datetime_local_field :due_date %>
-    </div>
-  
-    <div class="actions">
-      <%= form.submit %>
-    </div>
-  <% end %>
+<div id="task-form-root" 
+     data-task-id="<%= task.persisted? ? task.id : '' %>"
+     data-task-name="<%= task.name %>"
+     data-task-description="<%= task.description %>"
+     data-task-due-date="<%= task.due_date&.strftime('%Y-%m-%dT%H:%M') %>"
+     data-errors="<%= task.errors.full_messages.to_json %>"
+     data-form-action="<%= task.persisted? ? task_path(task) : tasks_path %>"
+     data-form-method="<%= task.persisted? ? 'PATCH' : 'POST' %>"
+     data-is-edit="<%= task.persisted? %>">
+</div>
+
+<%= form_with(model: task, local: true, html: { id: 'rails-task-form', style: 'display: none;' }) do |form| %>
+  <%= form.text_field :name, id: 'rails-name' %>
+  <%= form.text_area :description, id: 'rails-description' %>
+  <%= form.datetime_local_field :due_date, id: 'rails-due-date' %>
+  <%= form.submit id: 'rails-submit' %>
+<% end %>

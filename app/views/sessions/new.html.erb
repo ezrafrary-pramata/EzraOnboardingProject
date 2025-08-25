@@ -1,12 +1,14 @@
-<%= tag.div(flash[:alert], style: "color:red") if flash[:alert] %>
-<%= tag.div(flash[:notice], style: "color:green") if flash[:notice] %>
+<div id="login-form-root" 
+     data-session-path="<%= session_path %>"
+     data-new-password-path="<%= new_password_path %>"
+     data-new-user-path="<%= new_user_path %>"
+     data-flash-alert="<%= flash[:alert] %>"
+     data-flash-notice="<%= flash[:notice] %>"
+     data-email-value="<%= params[:email_address] %>">
+</div>
 
-<%= form_with url: session_path do |form| %>
-  <%= form.email_field :email_address, required: true, autofocus: true, autocomplete: "username", placeholder: "Enter your email address", value: params[:email_address] %><br>
-  <%= form.password_field :password, required: true, autocomplete: "current-password", placeholder: "Enter your password", maxlength: 72 %><br>
-  <%= form.submit "Sign in" %>
+<%= form_with url: session_path, local: true, html: { id: 'rails-login-form', style: 'display: none;' } do |form| %>
+  <%= form.email_field :email_address, id: 'rails-email', required: true, autocomplete: "username" %>
+  <%= form.password_field :password, id: 'rails-password', required: true, autocomplete: "current-password", maxlength: 72 %>
+  <%= form.submit "Sign in", id: 'rails-submit' %>
 <% end %>
-<br>
-
-<%= link_to "Forgot password?", new_password_path %><br>
-<%= link_to "Create new user", new_user_path %>

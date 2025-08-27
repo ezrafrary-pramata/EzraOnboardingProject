@@ -5,9 +5,30 @@ class TaskList extends React.Component {
     super(props)
     this.state = { 
       tasks: this.props.tasks || [],
+      users: this.props.users || [],
       searchTerm: '',
       filteredTasks: this.props.tasks || []
     }
+    
+    // Debug: Log what we're receiving
+    console.log('TaskList props:', this.props)
+    console.log('Tasks:', this.props.tasks)
+    console.log('Users:', this.props.users)
+    
+    // Create user lookup map for quick access
+    this.userLookup = {}
+    if (this.props.users) {
+      this.props.users.forEach(user => {
+        this.userLookup[user.id] = user
+      })
+    }
+    
+    console.log('User lookup map:', this.userLookup)
+  }
+  
+  getUserEmail = (userId) => {
+    const user = this.userLookup[userId]
+    return user ? user.email_address : 'Unknown user'
   }
   
   handleSearchChange = (e) => {
@@ -177,25 +198,40 @@ class TaskList extends React.Component {
                   marginBottom: task.description ? '12px' : '0'
                 }
               }, [
-                // Task name (clickable)
-                React.createElement('a', { 
-                  key: 'task-name',
-                  href: `/tasks/${task.id}`,
-                  style: {
-                    textDecoration: 'none',
-                    color: '#495057',
-                    fontSize: '18px',
-                    fontWeight: '600',
-                    flex: '1',
-                    marginRight: '15px'
-                  },
-                  onMouseEnter: (e) => {
-                    e.target.style.color = '#007bff'
-                  },
-                  onMouseLeave: (e) => {
-                    e.target.style.color = '#495057'
-                  }
-                }, task.name),
+                // Task info container
+                React.createElement('div', {
+                  key: 'task-info',
+                  style: { flex: '1', marginRight: '15px' }
+                }, [
+                  // Task name (clickable)
+                  React.createElement('a', { 
+                    key: 'task-name',
+                    href: `/tasks/${task.id}`,
+                    style: {
+                      textDecoration: 'none',
+                      color: '#495057',
+                      fontSize: '18px',
+                      fontWeight: '600',
+                      display: 'block'
+                    },
+                    onMouseEnter: (e) => {
+                      e.target.style.color = '#007bff'
+                    },
+                    onMouseLeave: (e) => {
+                      e.target.style.color = '#495057'
+                    }
+                  }, task.name),
+                  
+                  // User email (shown below task name)
+                  React.createElement('div', {
+                    key: 'user-email',
+                    style: {
+                      color: '#6c757d',
+                      fontSize: '14px',
+                      marginTop: '4px'
+                    }
+                  }, `Assigned by: ${this.getUserEmail(task.user_id)}`)
+                ]),
                 
                 // Due date badge
                 dueDateInfo ? React.createElement('span', {

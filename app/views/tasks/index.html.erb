@@ -22,10 +22,14 @@
   <% end %>
   
   const tasks = <%= raw @tasks.to_json %>
+  const users = <%= raw @users.to_json %>  
   const container = document.getElementById('react-task-list')
   
   if (container) {
     const root = createRoot(container)
-    root.render(React.createElement(TaskList, { tasks: tasks }))
+    root.render(React.createElement(TaskList, { 
+      tasks: tasks, 
+      users: users    
+    }))
   }
 </script>

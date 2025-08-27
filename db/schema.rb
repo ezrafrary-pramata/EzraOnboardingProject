@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_08_21_234514) do
+ActiveRecord::Schema[8.0].define(version: 2025_08_27_222132) do
   create_table "organizations", force: :cascade do |t|
     t.string "name"
     t.string "subdomain"
@@ -34,6 +34,12 @@ ActiveRecord::Schema[8.0].define(version: 2025_08_21_234514) do
     t.integer "user_id"
     t.text "description"
     t.datetime "due_date"
+    t.integer "assigned_to_user_id"
+    t.boolean "done"
+    t.integer "assigned_user_id"
+    t.integer "assigned_to"
+    t.index ["assigned_to"], name: "index_tasks_on_assigned_to"
+    t.index ["assigned_user_id"], name: "index_tasks_on_assigned_user_id"
     t.index ["user_id"], name: "index_tasks_on_user_id"
   end
 

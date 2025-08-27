@@ -5,6 +5,22 @@ class TasksController < ApplicationController
   def index
     # In multi-database setup, tasks are automatically scoped to current tenant
     @tasks = Task.all.order(created_at: :desc)
+
+    # Get unique user_ids from tasks to fetch only needed users
+    user_ids = @tasks.pluck(:user_id).uniq
+    
+    # Fetch users for the current tenant
+    @users = User.where(id: user_ids).select(:id, :email_address)
+
+    respond_to do |format|
+      format.html # renders the HTML view as normal
+      format.json { 
+        render json: {
+          tasks: @tasks.as_json,
+          users: @users.as_json(only: [:id, :email_address])
+        }
+      }
+    end
   end
 
   def show

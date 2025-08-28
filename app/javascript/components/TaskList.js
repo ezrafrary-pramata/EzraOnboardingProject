@@ -222,15 +222,34 @@ class TaskList extends React.Component {
                     }
                   }, task.name),
                   
-                  // User email (shown below task name)
+                  // User info (created by and assigned to)
                   React.createElement('div', {
-                    key: 'user-email',
+                    key: 'user-info',
                     style: {
                       color: '#6c757d',
                       fontSize: '14px',
                       marginTop: '4px'
                     }
-                  }, `Assigned by: ${this.getUserEmail(task.user_id)}`)
+                  }, [
+                    React.createElement('div', {
+                      key: 'created-by',
+                      style: { marginBottom: '2px' }
+                    }, `Created by: ${this.getUserEmail(task.user_id)}`),
+                    
+                    task.assigned_to ? React.createElement('div', {
+                      key: 'assigned-to',
+                      style: { 
+                        color: '#28a745',
+                        fontWeight: '500'
+                      }
+                    }, `📋 Assigned to: ${this.getUserEmail(task.assigned_to)}`) : React.createElement('div', {
+                      key: 'unassigned',
+                      style: { 
+                        color: '#6c757d',
+                        fontStyle: 'italic'
+                      }
+                    }, '👤 Unassigned')
+                  ])
                 ]),
                 
                 // Due date badge

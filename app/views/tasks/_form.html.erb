@@ -3,15 +3,18 @@
      data-task-name="<%= task.name %>"
      data-task-description="<%= task.description %>"
      data-task-due-date="<%= task.due_date&.strftime('%Y-%m-%dT%H:%M') %>"
+     data-task-assigned-to="<%= task.respond_to?(:assigned_to) ? task.assigned_to : '' %>"
      data-errors="<%= task.errors.full_messages.to_json %>"
      data-form-action="<%= task.persisted? ? task_path(task) : tasks_path %>"
      data-form-method="<%= task.persisted? ? 'PATCH' : 'POST' %>"
-     data-is-edit="<%= task.persisted? %>">
+     data-is-edit="<%= task.persisted? %>"
+     data-organization-users="<%= (@organization_users || []).to_json %>">
 </div>
 
 <%= form_with(model: task, local: true, html: { id: 'rails-task-form', style: 'display: none;' }) do |form| %>
-  <%= form.text_field :name, id: 'rails-name' %>
-  <%= form.text_area :description, id: 'rails-description' %>
-  <%= form.datetime_local_field :due_date, id: 'rails-due-date' %>
+  <%= form.text_field :name, id: 'rails-name', value: '' %>
+  <%= form.text_area :description, id: 'rails-description', value: '' %>
+  <%= form.datetime_local_field :due_date, id: 'rails-due-date', value: '' %>
+  <%= form.number_field :assigned_to, id: 'rails-assigned-to', value: '' %>
   <%= form.submit id: 'rails-submit' %>
 <% end %>

@@ -36,7 +36,7 @@ class Task < ApplicationRecord
     @user = user_obj
   end
   
-  # ADD THIS: Similar method for assigned_to user
+  # Method for assigned_to user
   def assigned_user
     return @assigned_user if defined?(@assigned_user)
     return nil unless assigned_to.present?
@@ -76,12 +76,12 @@ class Task < ApplicationRecord
     user&.email_address || "Unknown User"
   end
   
-  # ADD THIS: Helper method for assigned user email
+  # Helper method for assigned user email
   def assigned_user_email
     assigned_user&.email_address || "Unassigned"
   end
   
-  # ADD THIS: Helper method to get assigned by email (creator)
+  # Helper method to get assigned by email (creator)
   def assigned_by_email
     user&.email_address || "Unknown User"
   end

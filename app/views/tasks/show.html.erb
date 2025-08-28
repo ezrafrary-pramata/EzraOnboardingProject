@@ -6,10 +6,32 @@
   import TaskShow from "components/TaskShow"
   
   const task = <%= raw @task.to_json %>
+  
+  // Get user information for display
+  const assignedUser = <% if @task.respond_to?(:assigned_to) && @task.assigned_to.present? %>
+    <% begin %>
+      <%= raw({ id: @task.assigned_to, email_address: @task.assigned_user_email }.to_json) %>
+    <% rescue => e %>
+      null
+    <% end %>
+  <% else %>
+    null
+  <% end %>
+  
+  const createdByUser = <% begin %>
+    <%= raw({ id: @task.user_id, email_address: @task.user_email }.to_json) %>
+  <% rescue => e %>
+    <%= raw({ id: @task.user_id, email_address: "Unknown User" }.to_json) %>
+  <% end %>
+  
   const container = document.getElementById('react-task-show')
   
   if (container) {
     const root = createRoot(container)
-    root.render(React.createElement(TaskShow, { task: task }))
+    root.render(React.createElement(TaskShow, { 
+      task: task,
+      assignedUser: assignedUser,
+      createdByUser: createdByUser
+    }))
   }
 </script>

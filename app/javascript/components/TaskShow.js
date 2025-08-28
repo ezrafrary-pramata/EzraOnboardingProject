@@ -4,7 +4,9 @@ class TaskShow extends React.Component {
   constructor(props) {
     super(props)
     this.state = {
-      task: this.props.task || {}
+      task: this.props.task || {},
+      assignedUser: this.props.assignedUser || null,
+      createdByUser: this.props.createdByUser || null
     }
   }
   
@@ -47,7 +49,7 @@ class TaskShow extends React.Component {
   }
   
   render() {
-    const { task } = this.state
+    const { task, assignedUser, createdByUser } = this.state
     const dueDateInfo = this.formatDueDate(task.due_date)
     
     return React.createElement('div', {
@@ -81,6 +83,56 @@ class TaskShow extends React.Component {
             lineHeight: '1.2'
           }
         }, task.name),
+        
+        // Assignment info
+        React.createElement('div', {
+          key: 'assignment-info',
+          style: {
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: '15px',
+            marginBottom: '15px'
+          }
+        }, [
+          // Created by badge
+          createdByUser && React.createElement('div', {
+            key: 'created-by',
+            style: {
+              display: 'inline-block',
+              backgroundColor: '#6c757d',
+              color: 'white',
+              padding: '6px 12px',
+              borderRadius: '16px',
+              fontSize: '13px',
+              fontWeight: '500'
+            }
+          }, `👤 Created by: ${createdByUser.email_address}`),
+          
+          // Assigned to badge
+          assignedUser ? React.createElement('div', {
+            key: 'assigned-to',
+            style: {
+              display: 'inline-block',
+              backgroundColor: '#28a745',
+              color: 'white',
+              padding: '6px 12px',
+              borderRadius: '16px',
+              fontSize: '13px',
+              fontWeight: '500'
+            }
+          }, `📋 Assigned to: ${assignedUser.email_address}`) : React.createElement('div', {
+            key: 'unassigned',
+            style: {
+              display: 'inline-block',
+              backgroundColor: '#dc3545',
+              color: 'white',
+              padding: '6px 12px',
+              borderRadius: '16px',
+              fontSize: '13px',
+              fontWeight: '500'
+            }
+          }, '❌ Unassigned')
+        ]),
         
         // Due date badge (if present)
         dueDateInfo ? React.createElement('div', {

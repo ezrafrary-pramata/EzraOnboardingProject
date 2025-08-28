@@ -62,10 +62,12 @@ document.addEventListener('DOMContentLoaded', function() {
         taskName: taskRoot.dataset.taskName || '',
         taskDescription: taskRoot.dataset.taskDescription || '',
         taskDueDate: taskRoot.dataset.taskDueDate || '',
+        taskAssignedTo: taskRoot.dataset.taskAssignedTo || '',
         errors: JSON.parse(taskRoot.dataset.errors || '[]'),
         formAction: taskRoot.dataset.formAction,
         formMethod: taskRoot.dataset.formMethod,
-        isEdit: taskRoot.dataset.isEdit === 'true'
+        isEdit: taskRoot.dataset.isEdit === 'true',
+        organizationUsers: JSON.parse(taskRoot.dataset.organizationUsers || '[]')
       };
       
       const root = ReactDOMClient.createRoot(taskRoot);
@@ -122,10 +124,12 @@ document.addEventListener('turbo:load', function() {
         taskName: taskRoot.dataset.taskName || '',
         taskDescription: taskRoot.dataset.taskDescription || '',
         taskDueDate: taskRoot.dataset.taskDueDate || '',
+        taskAssignedTo: taskRoot.dataset.taskAssignedTo || '',
         errors: JSON.parse(taskRoot.dataset.errors || '[]'),
         formAction: taskRoot.dataset.formAction,
         formMethod: taskRoot.dataset.formMethod,
-        isEdit: taskRoot.dataset.isEdit === 'true'
+        isEdit: taskRoot.dataset.isEdit === 'true',
+        organizationUsers: JSON.parse(taskRoot.dataset.organizationUsers || '[]')
       };
       
       const root = ReactDOMClient.createRoot(taskRoot);

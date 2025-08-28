@@ -37,4 +37,23 @@ Apartment.configure do |config|
   
   # Default tenant fallback
   config.default_tenant = 'public'
+  
+  # When creating a new tenant, run all migrations
+  config.seed_after_create = false
+end
+
+# Add a method to create tenant with all current migrations
+module Apartment
+  module Tenant
+    class << self
+      def create_with_migrations(tenant_name)
+        create(tenant_name)
+        switch!(tenant_name) do
+          ActiveRecord::MigrationContext.new(
+            Rails.application.paths["db/migrate"].expanded
+          ).migrate
+        end
+      end
+    end
+  end
 end

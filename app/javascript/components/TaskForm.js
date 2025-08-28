@@ -5,31 +5,64 @@ const TaskForm = ({
   taskName = '',
   taskDescription = '',
   taskDueDate = '',
+  taskAssignedTo = '',
   errors = [],
   formAction = '/tasks',
   formMethod = 'POST',
-  isEdit = false
+  isEdit = false,
+  organizationUsers = []
 }) => {
   const [name, setName] = useState(taskName);
   const [description, setDescription] = useState(taskDescription);
   const [dueDate, setDueDate] = useState(taskDueDate);
+  const [assignedTo, setAssignedTo] = useState(taskAssignedTo);
 
   const handleSubmit = (e) => {
     e.preventDefault();
     
-    // Get the hidden Rails form and populate it
-    const railsForm = document.getElementById('rails-task-form');
-    const nameInput = document.getElementById('rails-name');
-    const descriptionInput = document.getElementById('rails-description');
-    const dueDateInput = document.getElementById('rails-due-date');
-    const submitBtn = document.getElementById('rails-submit');
+    // Create and submit form directly
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = formAction;
+    form.style.display = 'none';
     
-    if (railsForm && nameInput && descriptionInput && dueDateInput && submitBtn) {
-      nameInput.value = name;
-      descriptionInput.value = description;
-      dueDateInput.value = dueDate;
-      submitBtn.click();
+    // Add CSRF token
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+    if (csrfToken) {
+      const csrfInput = document.createElement('input');
+      csrfInput.type = 'hidden';
+      csrfInput.name = 'authenticity_token';
+      csrfInput.value = csrfToken;
+      form.appendChild(csrfInput);
     }
+    
+    // Add method override for PATCH
+    if (isEdit) {
+      const methodInput = document.createElement('input');
+      methodInput.type = 'hidden';
+      methodInput.name = '_method';
+      methodInput.value = 'PATCH';
+      form.appendChild(methodInput);
+    }
+    
+    // Add form fields
+    const fields = [
+      { name: 'task[name]', value: name },
+      { name: 'task[description]', value: description },
+      { name: 'task[due_date]', value: dueDate },
+      { name: 'task[assigned_to]', value: assignedTo || '' }
+    ];
+    
+    fields.forEach(field => {
+      const input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = field.name;
+      input.value = field.value;
+      form.appendChild(input);
+    });
+    
+    document.body.appendChild(form);
+    form.submit();
   };
 
   const styles = {
@@ -123,6 +156,19 @@ const TaskForm = ({
       outline: 'none',
       boxSizing: 'border-box'
     },
+    select: {
+      width: '100%',
+      padding: '12px 16px',
+      border: '1px solid #d1d5db',
+      borderRadius: '8px',
+      fontSize: '1rem',
+      color: '#111827',
+      backgroundColor: 'white',
+      transition: 'all 0.2s',
+      outline: 'none',
+      boxSizing: 'border-box',
+      cursor: 'pointer'
+    },
     textarea: {
       width: '100%',
       padding: '12px 16px',
@@ -158,9 +204,7 @@ const TaskForm = ({
   // Format due date for display (convert from Rails format if needed)
   const formatDateForInput = (dateStr) => {
     if (!dateStr) return '';
-    // If it's already in the correct format, return as is
     if (dateStr.includes('T')) return dateStr.slice(0, 16);
-    // Convert from other formats if needed
     const date = new Date(dateStr);
     if (isNaN(date.getTime())) return '';
     return date.toISOString().slice(0, 16);
@@ -241,7 +285,9 @@ const TaskForm = ({
       ),
 
       // Form
-      React.createElement('div', null,
+      React.createElement('form', {
+        onSubmit: handleSubmit
+      },
         // Name Field
         React.createElement('div', {
           style: styles.formGroup
@@ -252,7 +298,6 @@ const TaskForm = ({
           }, "Name"),
           React.createElement('input', {
             id: "task_name",
-            name: "task[name]",
             type: "text",
             required: true,
             value: name,
@@ -274,7 +319,6 @@ const TaskForm = ({
           }, "Description"),
           React.createElement('textarea', {
             id: "task_description",
-            name: "task[description]",
             value: description,
             onChange: (e) => setDescription(e.target.value),
             style: styles.textarea,
@@ -283,6 +327,32 @@ const TaskForm = ({
             placeholder: "Enter task description",
             rows: 4
           })
+        ),
+
+        // Assigned To Field
+        React.createElement('div', {
+          style: styles.formGroup
+        },
+          React.createElement('label', {
+            htmlFor: "task_assigned_to",
+            style: styles.label
+          }, "Assign To"),
+          React.createElement('select', {
+            id: "task_assigned_to",
+            value: assignedTo,
+            onChange: (e) => setAssignedTo(e.target.value),
+            style: styles.select,
+            onFocus: (e) => e.target.style.borderColor = '#0ea5e9',
+            onBlur: (e) => e.target.style.borderColor = '#d1d5db'
+          },
+            React.createElement('option', { value: '' }, 'Select a user (optional)'),
+            organizationUsers.map(user => 
+              React.createElement('option', {
+                key: user.id,
+                value: user.id
+              }, user.email_address)
+            )
+          )
         ),
 
         // Due Date Field
@@ -295,7 +365,6 @@ const TaskForm = ({
           }, "Due Date & Time (optional)"),
           React.createElement('input', {
             id: "task_due_date",
-            name: "task[due_date]",
             type: "datetime-local",
             value: formattedDueDate,
             onChange: (e) => setDueDate(e.target.value),
@@ -311,7 +380,6 @@ const TaskForm = ({
         },
           React.createElement('button', {
             type: "submit",
-            onClick: handleSubmit,
             style: styles.submitButton,
             onMouseEnter: (e) => e.target.style.backgroundColor = '#0284c7',
             onMouseLeave: (e) => e.target.style.backgroundColor = '#0ea5e9'

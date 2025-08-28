@@ -12,6 +12,7 @@ pin "react-dom/client", to: "https://ga.jspm.io/npm:react-dom@18.2.0/client.js"
 pin "scheduler", to: "https://ga.jspm.io/npm:scheduler@0.23.0/index.js"
 
 # react components
+pin "components/Header", to: "components/Header.js"
 pin "components/TaskList", to: "components/TaskList.js"
 pin "components/NewTask", to: "components/NewTask.js"
 pin "components/TaskShow", to: "components/TaskShow.js"

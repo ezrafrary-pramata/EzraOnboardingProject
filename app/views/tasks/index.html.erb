@@ -1,19 +1,28 @@
 <%= link_to "Log in", new_session_path unless authenticated? %>
 
-<h1>TaskTracker</h1>
-<p>Welcome, <%= Current.user.email_address %></p>
-<p>Organization: <%= Current.user.organization&.name || "No organization assigned" %></p>
-
+<div id="react-header"></div>
 <div id="react-new-task"></div>
 <div id="react-task-list"></div>
 
 <script type="module">
   import React from "react"
   import { createRoot } from "react-dom/client"
+  import Header from "components/Header"
   import TaskList from "components/TaskList"
   import NewTask from "components/NewTask"
 
   <% if authenticated? %>
+    // Mount Header
+    const headerContainer = document.getElementById('react-header')
+    if (headerContainer) {
+      const headerRoot = createRoot(headerContainer)
+      headerRoot.render(React.createElement(Header, {
+        userEmail: '<%= Current.user.email_address %>',
+        organizationName: '<%= Current.user.organization&.name || "No organization assigned" %>'
+      }))
+    }
+
+    // Mount New Task Button
     const newTaskContainer = document.getElementById('react-new-task')
     if (newTaskContainer) {
       const root = createRoot(newTaskContainer)
@@ -21,6 +30,7 @@
     }
   <% end %>
   
+  // Mount Task List
   const tasks = <%= raw @tasks.to_json %>
   const users = <%= raw @users.to_json %>  
   const container = document.getElementById('react-task-list')

@@ -7,6 +7,8 @@ class TaskList extends React.Component {
       tasks: this.props.tasks || [],
       users: this.props.users || [],
       searchTerm: '',
+      createdByFilter: '',
+      assignedToFilter: '',
       filteredTasks: this.props.tasks || []
     }
     
@@ -33,21 +35,60 @@ class TaskList extends React.Component {
   
   handleSearchChange = (e) => {
     const searchTerm = e.target.value.toLowerCase()
-    const filteredTasks = this.state.tasks.filter(task => {
-      const nameMatch = task.name.toLowerCase().includes(searchTerm)
-      const descriptionMatch = task.description && task.description.toLowerCase().includes(searchTerm)
-      return nameMatch || descriptionMatch
+    this.setState({
+      searchTerm: e.target.value
+    }, () => {
+      this.applyFilters()
+    })
+  }
+  
+  handleCreatedByFilterChange = (e) => {
+    this.setState({
+      createdByFilter: e.target.value
+    }, () => {
+      this.applyFilters()
+    })
+  }
+  
+  handleAssignedToFilterChange = (e) => {
+    this.setState({
+      assignedToFilter: e.target.value
+    }, () => {
+      this.applyFilters()
+    })
+  }
+  
+  applyFilters = () => {
+    const { tasks } = this.state
+    const { searchTerm, createdByFilter, assignedToFilter } = this.state
+    
+    let filteredTasks = tasks.filter(task => {
+      // Text search filter
+      const nameMatch = searchTerm === '' || task.name.toLowerCase().includes(searchTerm.toLowerCase())
+      const descriptionMatch = searchTerm === '' || (task.description && task.description.toLowerCase().includes(searchTerm.toLowerCase()))
+      const textMatch = nameMatch || descriptionMatch
+      
+      // Created by filter
+      const createdByMatch = createdByFilter === '' || task.user_id.toString() === createdByFilter
+      
+      // Assigned to filter
+      const assignedToMatch = assignedToFilter === '' || 
+        (assignedToFilter === 'unassigned' && !task.assigned_to) ||
+        (task.assigned_to && task.assigned_to.toString() === assignedToFilter)
+      
+      return textMatch && createdByMatch && assignedToMatch
     })
     
     this.setState({
-      searchTerm: e.target.value,
       filteredTasks: filteredTasks
     })
   }
   
-  clearSearch = () => {
+  clearAllFilters = () => {
     this.setState({
       searchTerm: '',
+      createdByFilter: '',
+      assignedToFilter: '',
       filteredTasks: this.state.tasks
     })
   }
@@ -74,6 +115,8 @@ class TaskList extends React.Component {
   }
   
   render() {
+    const hasActiveFilters = this.state.searchTerm || this.state.createdByFilter || this.state.assignedToFilter
+    
     return React.createElement('div', { 
       className: 'task-list-container',
       style: {
@@ -82,64 +125,198 @@ class TaskList extends React.Component {
         fontFamily: 'Arial, sans-serif'
       }
     }, [
-      // Search Bar
+      // Filters Section
       React.createElement('div', {
-        key: 'search-container',
+        key: 'filters-section',
         style: {
-          marginBottom: '20px',
-          position: 'relative'
+          backgroundColor: '#f8f9fa',
+          border: '1px solid #e9ecef',
+          borderRadius: '8px',
+          padding: '20px',
+          marginBottom: '20px'
         }
       }, [
-        React.createElement('input', {
-          key: 'search-input',
-          type: 'text',
-          value: this.state.searchTerm,
-          onChange: this.handleSearchChange,
-          placeholder: 'Search tasks and descriptions...',
+        React.createElement('h3', {
+          key: 'filters-title',
           style: {
-            width: '100%',
-            padding: '12px 40px 12px 16px',
-            border: '2px solid #e9ecef',
-            borderRadius: '8px',
+            margin: '0 0 16px 0',
             fontSize: '16px',
-            outline: 'none',
-            transition: 'border-color 0.2s ease',
-            boxSizing: 'border-box'
-          },
-          onFocus: (e) => {
-            e.target.style.borderColor = '#007bff'
-          },
-          onBlur: (e) => {
-            e.target.style.borderColor = '#e9ecef'
+            fontWeight: '600',
+            color: '#495057'
           }
-        }),
+        }, 'Search & Filter Tasks'),
         
-        // Clear button
-        this.state.searchTerm ? React.createElement('button', {
-          key: 'clear-button',
-          onClick: this.clearSearch,
+        // Search Bar
+        React.createElement('div', {
+          key: 'search-container',
           style: {
-            position: 'absolute',
-            right: '8px',
-            top: '50%',
-            transform: 'translateY(-50%)',
-            background: 'none',
+            marginBottom: '16px',
+            position: 'relative'
+          }
+        }, [
+          React.createElement('input', {
+            key: 'search-input',
+            type: 'text',
+            value: this.state.searchTerm,
+            onChange: this.handleSearchChange,
+            placeholder: 'Search by task name or description...',
+            style: {
+              width: '100%',
+              padding: '10px 40px 10px 12px',
+              border: '1px solid #ced4da',
+              borderRadius: '6px',
+              fontSize: '14px',
+              outline: 'none',
+              transition: 'border-color 0.2s ease',
+              boxSizing: 'border-box'
+            },
+            onFocus: (e) => {
+              e.target.style.borderColor = '#007bff'
+            },
+            onBlur: (e) => {
+              e.target.style.borderColor = '#ced4da'
+            }
+          }),
+          
+          // Clear search button
+          this.state.searchTerm ? React.createElement('button', {
+            key: 'clear-search-button',
+            onClick: () => this.setState({ searchTerm: '' }, () => this.applyFilters()),
+            style: {
+              position: 'absolute',
+              right: '8px',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              background: 'none',
+              border: 'none',
+              fontSize: '16px',
+              color: '#6c757d',
+              cursor: 'pointer',
+              padding: '4px',
+              borderRadius: '4px'
+            },
+            onMouseEnter: (e) => {
+              e.target.style.backgroundColor = '#f8f9fa'
+              e.target.style.color = '#495057'
+            },
+            onMouseLeave: (e) => {
+              e.target.style.backgroundColor = 'transparent'
+              e.target.style.color = '#6c757d'
+            }
+          }, '×') : null
+        ]),
+        
+        // Filter dropdowns row
+        React.createElement('div', {
+          key: 'filters-row',
+          style: {
+            display: 'flex',
+            gap: '12px',
+            marginBottom: '12px',
+            flexWrap: 'wrap'
+          }
+        }, [
+          // Created by filter
+          React.createElement('div', {
+            key: 'created-by-filter',
+            style: { flex: '1', minWidth: '200px' }
+          }, [
+            React.createElement('label', {
+              key: 'created-by-label',
+              style: {
+                display: 'block',
+                fontSize: '12px',
+                fontWeight: '500',
+                color: '#6c757d',
+                marginBottom: '4px'
+              }
+            }, 'Created by:'),
+            React.createElement('select', {
+              key: 'created-by-select',
+              value: this.state.createdByFilter,
+              onChange: this.handleCreatedByFilterChange,
+              style: {
+                width: '100%',
+                padding: '8px',
+                border: '1px solid #ced4da',
+                borderRadius: '4px',
+                fontSize: '14px',
+                backgroundColor: 'white',
+                cursor: 'pointer'
+              }
+            }, [
+              React.createElement('option', { key: 'created-by-all', value: '' }, 'All users'),
+              ...this.state.users.map(user => 
+                React.createElement('option', {
+                  key: `created-by-${user.id}`,
+                  value: user.id
+                }, user.email_address)
+              )
+            ])
+          ]),
+          
+          // Assigned to filter
+          React.createElement('div', {
+            key: 'assigned-to-filter',
+            style: { flex: '1', minWidth: '200px' }
+          }, [
+            React.createElement('label', {
+              key: 'assigned-to-label',
+              style: {
+                display: 'block',
+                fontSize: '12px',
+                fontWeight: '500',
+                color: '#6c757d',
+                marginBottom: '4px'
+              }
+            }, 'Assigned to:'),
+            React.createElement('select', {
+              key: 'assigned-to-select',
+              value: this.state.assignedToFilter,
+              onChange: this.handleAssignedToFilterChange,
+              style: {
+                width: '100%',
+                padding: '8px',
+                border: '1px solid #ced4da',
+                borderRadius: '4px',
+                fontSize: '14px',
+                backgroundColor: 'white',
+                cursor: 'pointer'
+              }
+            }, [
+              React.createElement('option', { key: 'assigned-to-all', value: '' }, 'All assignments'),
+              React.createElement('option', { key: 'assigned-to-unassigned', value: 'unassigned' }, 'Unassigned'),
+              ...this.state.users.map(user => 
+                React.createElement('option', {
+                  key: `assigned-to-${user.id}`,
+                  value: user.id
+                }, user.email_address)
+              )
+            ])
+          ])
+        ]),
+        
+        // Clear all filters button
+        hasActiveFilters ? React.createElement('button', {
+          key: 'clear-all-button',
+          onClick: this.clearAllFilters,
+          style: {
+            backgroundColor: '#6c757d',
+            color: 'white',
             border: 'none',
-            fontSize: '18px',
-            color: '#6c757d',
+            padding: '6px 12px',
+            borderRadius: '4px',
+            fontSize: '12px',
             cursor: 'pointer',
-            padding: '4px',
-            borderRadius: '4px'
+            transition: 'background-color 0.2s ease'
           },
           onMouseEnter: (e) => {
-            e.target.style.backgroundColor = '#f8f9fa'
-            e.target.style.color = '#495057'
+            e.target.style.backgroundColor = '#5a6268'
           },
           onMouseLeave: (e) => {
-            e.target.style.backgroundColor = 'transparent'
-            e.target.style.color = '#6c757d'
+            e.target.style.backgroundColor = '#6c757d'
           }
-        }, '×') : null
+        }, 'Clear all filters') : null
       ]),
       
       // Results count
@@ -148,12 +325,28 @@ class TaskList extends React.Component {
         style: {
           marginBottom: '15px',
           color: '#6c757d',
-          fontSize: '14px'
+          fontSize: '14px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
         }
-      }, this.state.searchTerm ? 
-        `Showing ${this.state.filteredTasks.length} of ${this.state.tasks.length} tasks` :
-        `${this.state.tasks.length} tasks`
-      ),
+      }, [
+        React.createElement('span', {
+          key: 'results-count'
+        }, hasActiveFilters ? 
+          `Showing ${this.state.filteredTasks.length} of ${this.state.tasks.length} tasks` :
+          `${this.state.tasks.length} tasks`
+        ),
+        
+        hasActiveFilters ? React.createElement('span', {
+          key: 'active-filters-indicator',
+          style: {
+            fontSize: '12px',
+            color: '#007bff',
+            fontWeight: '500'
+          }
+        }, 'Filters active') : null
+      ]),
       
       // Task List
       React.createElement('div', {
@@ -291,8 +484,8 @@ class TaskList extends React.Component {
               borderRadius: '8px',
               border: '1px solid #e9ecef'
             }
-          }, this.state.searchTerm ? 
-            `No tasks found matching "${this.state.searchTerm}"` :
+          }, hasActiveFilters ? 
+            'No tasks found matching the current filters' :
             'No tasks available'
           )
       )

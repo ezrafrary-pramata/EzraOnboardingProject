@@ -1,0 +1,68 @@
+<!-- Single-SPA Status Indicator -->
+<div id="single-spa-status" style="position: fixed; top: 10px; right: 10px; background: #333; color: white; padding: 10px; border-radius: 5px; z-index: 1000; font-size: 12px; max-width: 300px;">
+  <div><strong>Single-SPA Debug Info:</strong></div>
+  <div>Status: <span id="spa-status">Loading...</span></div>
+  <div>Apps: <span id="mfe-count">0</span></div>
+  <div>Import Method: <span id="import-method">Unknown</span></div>
+  <div>Errors: <span id="error-count">0</span></div>
+  <div style="margin-top: 5px; font-size: 10px;">
+    <button onclick="console.log('Debug info:', window.debugSingleSpa)" style="background: #555; color: white; border: none; padding: 2px 5px; border-radius: 3px; cursor: pointer;">
+      Console Debug
+    </button>
+  </div>
+</div>
+
+<script type="module">
+  let errorCount = 0;
+  
+  // Listen for console errors
+  const originalError = console.error;
+  console.error = function(...args) {
+    if (args[0] && args[0].includes && (args[0].includes('Single-SPA') || args[0].includes('❌'))) {
+      errorCount++;
+      document.getElementById('error-count').textContent = errorCount;
+    }
+    originalError.apply(console, args);
+  };
+  
+  // Check Single-SPA status
+  function checkSingleSpaStatus() {
+    const statusEl = document.getElementById('spa-status');
+    const countEl = document.getElementById('mfe-count');
+    const methodEl = document.getElementById('import-method');
+    
+    if (window.singleSpa) {
+      statusEl.textContent = '✅ Active';
+      statusEl.style.color = '#4caf50';
+      methodEl.textContent = 'Script Tag';
+      
+      // Count registered applications
+      try {
+        const apps = window.singleSpa.getAppNames();
+        countEl.textContent = apps.length;
+      } catch (e) {
+        countEl.textContent = 'Error';
+      }
+    } else if (window.debugSingleSpa) {
+      statusEl.textContent = '🟡 Debug Mode';
+      statusEl.style.color = '#ff9800';
+      methodEl.textContent = 'Debug';
+      countEl.textContent = window.debugSingleSpa.apps ? window.debugSingleSpa.apps.length : 0;
+    } else {
+      statusEl.textContent = '❌ Not Found';
+      statusEl.style.color = '#f44336';
+      methodEl.textContent = 'None';
+    }
+  }
+  
+  // Check immediately and then every 2 seconds
+  checkSingleSpaStatus();
+  setInterval(checkSingleSpaStatus, 2000);
+  
+  // Log current state for debugging
+  console.log('🟢 Status indicator loaded. Current state:', {
+    singleSpaExists: !!window.singleSpa,
+    debugExists: !!window.debugSingleSpa,
+    location: window.location.pathname
+  });
+</script>

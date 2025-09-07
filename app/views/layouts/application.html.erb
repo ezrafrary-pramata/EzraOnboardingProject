@@ -22,71 +22,6 @@
     <%= javascript_importmap_tags %>
 
     <style>
-      /* Navigation styles */
-      .main-nav {
-        background-color: #fff;
-        border-bottom: 1px solid #e5e7eb;
-        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
-        padding: 0.75rem 1.5rem;
-      }
-      
-      .nav-container {
-        max-width: 1200px;
-        margin: 0 auto;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-      }
-      
-      .logo-link {
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-        text-decoration: none;
-        color: #1f2937;
-        transition: opacity 0.2s ease;
-      }
-      
-      .logo-link:hover {
-        opacity: 0.8;
-      }
-      
-      .logo-icon {
-        width: 32px;
-        height: 32px;
-        background-color: #3b82f6;
-        border-radius: 8px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: white;
-        font-weight: bold;
-        font-size: 16px;
-      }
-      
-      .logo-text {
-        font-size: 1.5rem;
-        font-weight: 700;
-        color: #1f2937;
-        margin: 0;
-      }
-      
-      .logout-button {
-        background-color: #ef4444;
-        color: white;
-        border: none;
-        padding: 0.5rem 1rem;
-        border-radius: 6px;
-        font-size: 0.875rem;
-        font-weight: 500;
-        cursor: pointer;
-        transition: background-color 0.2s ease;
-      }
-      
-      .logout-button:hover {
-        background-color: #dc2626;
-      }
-      
       /* Main content spacing */
       main {
         padding-top: 1rem;
@@ -95,23 +30,36 @@
   </head>
 
   <body>
-    <nav class="main-nav">
-      <div class="nav-container">
-        <!-- Logo/Home Link -->
-        <%= link_to root_path, class: "logo-link" do %>
-          <div class="logo-icon">T</div>
-          <h1 class="logo-text">TaskTracker</h1>
-        <% end %>
-        
-        <!-- Logout Button -->
-        <% if authenticated? %>
-          <%= button_to "Log out", session_path, method: :delete, class: "logout-button" %>
-        <% end %>
+    <!-- Header Microfrontend Container (replaces original nav) -->
+    <div id="header-mfe-container">
+      <div style="text-align: center; color: #666; padding: 10px; background: #f5f5f5; border-bottom: 1px solid #ddd;">
+        Loading Header Microfrontend...
       </div>
-    </nav>
+    </div>
     
     <main>
       <%= yield %>
     </main>
+    
+    <!-- Single-SPA Status Indicator (remove in production) -->
+    <%= render 'shared/single_spa_status' %>
+
+    <!-- Make user data available globally for microfrontends -->
+    <script>
+      <% if authenticated? %>
+        window.currentUser = {
+          email_address: '<%= Current.user.email_address %>',
+          organization_name: '<%= Current.user.organization&.name || "No organization assigned" %>'
+        };
+        window.isAuthenticated = true;
+      <% else %>
+        window.currentUser = null;
+        window.isAuthenticated = false;
+      <% end %>
+      console.log('🔵 User data loaded for microfrontends:', {
+        authenticated: window.isAuthenticated,
+        user: window.currentUser?.email_address || 'none'
+      });
+    </script>
   </body>
 </html>

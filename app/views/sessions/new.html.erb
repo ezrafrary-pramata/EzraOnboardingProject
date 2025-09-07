@@ -1,14 +1,26 @@
-<div id="login-form-root" 
-     data-session-path="<%= session_path %>"
-     data-new-password-path="<%= new_password_path %>"
-     data-new-user-path="<%= new_user_path %>"
-     data-flash-alert="<%= flash[:alert] %>"
-     data-flash-notice="<%= flash[:notice] %>"
-     data-email-value="<%= params[:email_address] %>">
+<!-- Login Microfrontend Container -->
+<div id="login-mfe-container">
+  <div style="text-align: center; color: #666; padding: 40px;">
+    Loading Login Microfrontend...
+  </div>
 </div>
 
+<!-- Hidden Rails form for the microfrontend to submit -->
 <%= form_with url: session_path, local: true, html: { id: 'rails-login-form', style: 'display: none;' } do |form| %>
   <%= form.email_field :email_address, id: 'rails-email', required: true, autocomplete: "username" %>
   <%= form.password_field :password, id: 'rails-password', required: true, autocomplete: "current-password", maxlength: 72 %>
   <%= form.submit "Sign in", id: 'rails-submit' %>
 <% end %>
+
+<!-- Make login data available globally for the microfrontend -->
+<script>
+  window.loginData = {
+    sessionPath: '<%= session_path %>',
+    newPasswordPath: '<%= new_password_path %>',
+    newUserPath: '<%= new_user_path %>',
+    flashAlert: <%= flash[:alert].to_json %>,
+    flashNotice: <%= flash[:notice].to_json %>,
+    emailValue: '<%= params[:email_address] %>'
+  };
+  console.log('🔵 Login data loaded for microfrontend:', window.loginData);
+</script>

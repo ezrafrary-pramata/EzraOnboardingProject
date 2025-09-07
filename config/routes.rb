@@ -3,5 +3,5 @@ Rails.application.routes.draw do
   resources :passwords, param: :token
   resources :users, only: [:new, :create]
   resources :tasks
-  root "tasks#index"
+  root to: redirect('/tasks')
 end

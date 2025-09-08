@@ -292,14 +292,14 @@ function initSingleSPA() {
   });
 
   // Register the demo task microfrontend
-  miniSPA.registerApplication({
-    name: 'task-mfe',
-    loadApp: createTaskMicrofrontend,
-    activeWhen: ['/tasks', '/'],
-    customProps: {
-      domElement: 'task-mfe-container'
-    }
-  });
+  // miniSPA.registerApplication({
+  //   name: 'task-mfe',
+  //   loadApp: createTaskMicrofrontend,
+  //   activeWhen: ['/tasks', '/'],
+  //   customProps: {
+  //     domElement: 'task-mfe-container'
+  //   }
+  // });
 
   // Register the TaskList microfrontend with enhanced error handling
   miniSPA.registerApplication({

@@ -32,3 +32,9 @@
 
 # Ignore master key for decrypting credentials and more.
 /config/master.key
+
+/node_modules/
+/tasklist-mfe/node_modules/
+/single-spa-root-config/node_modules/
+/header-mfe/node_modules/
+/login-mfe/node_modules/

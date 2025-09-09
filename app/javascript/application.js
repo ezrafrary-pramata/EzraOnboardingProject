@@ -4,7 +4,7 @@ import "controllers"
 
 console.log('🟢 Application.js loaded');
 
-// Self-contained Single-SPA implementation
+// Self-contained Single-SPA implementation (no external dependencies)
 class MiniSingleSPA {
   constructor() {
     this.apps = [];
@@ -30,10 +30,9 @@ class MiniSingleSPA {
 
   async loadAndMountApp(app) {
     try {
-      console.log('🔵 Loading app:', app.name);
-      console.log('🔵 App config:', app);
-      console.log('🔵 Current path:', window.location.pathname);
-      console.log('🔵 Should be active:', this.shouldAppBeActive(app));
+      console.log('🔵 [DEBUG] Loading app:', app.name);
+      console.log('🔵 [DEBUG] Current path:', window.location.pathname);
+      console.log('🔵 [DEBUG] Should be active:', this.shouldAppBeActive(app));
       
       // Check if container exists before proceeding
       const container = document.getElementById(app.customProps.domElement);
@@ -46,36 +45,36 @@ class MiniSingleSPA {
 
       // Only load the module if we haven't loaded it yet
       if (!app.appInstance) {
-        console.log('🔵 Calling loadApp function for:', app.name);
+        console.log('🔵 [DEBUG] Calling loadApp function for:', app.name);
         const appModule = await app.loadApp();
-        console.log('🔵 App module loaded:', app.name, appModule);
+        console.log('🔵 [DEBUG] App module loaded:', app.name, appModule);
         app.appInstance = appModule;
       }
       
       app.status = 'LOADED';
 
       if (this.shouldAppBeActive(app)) {
-        console.log('🔵 Mounting app:', app.name);
+        console.log('🔵 [DEBUG] Mounting app:', app.name);
         app.status = 'MOUNTING';
 
         if (app.appInstance.bootstrap) {
-          console.log('🔵 Bootstrapping app:', app.name);
+          console.log('🔵 [DEBUG] Bootstrapping app:', app.name);
           await app.appInstance.bootstrap(app.customProps);
         }
 
         if (app.appInstance.mount) {
-          console.log('🔵 Mounting app:', app.name);
+          console.log('🔵 [DEBUG] Mounting app:', app.name);
           await app.appInstance.mount(app.customProps);
         }
 
         app.status = 'MOUNTED';
-        console.log('✅ App mounted successfully:', app.name);
+        console.log('✅ [DEBUG] App mounted successfully:', app.name);
       } else {
-        console.log('🟡 App should not be active:', app.name);
+        console.log('🟡 [DEBUG] App should not be active:', app.name);
       }
     } catch (error) {
-      console.error('❌ Error loading/mounting app:', app.name, error);
-      console.error('❌ Error stack:', error.stack);
+      console.error('❌ [DEBUG] Error loading/mounting app:', app.name, error);
+      console.error('❌ [DEBUG] Error stack:', error.stack);
       app.status = 'LOAD_ERROR';
       
       // Show error in UI
@@ -97,25 +96,9 @@ class MiniSingleSPA {
     }
   }
 
-  async unmountApp(app) {
-    try {
-      console.log('🔵 Unmounting app:', app.name);
-      
-      if (app.appInstance && app.appInstance.unmount) {
-        await app.appInstance.unmount(app.customProps);
-        console.log('✅ App unmounted successfully:', app.name);
-      }
-      
-      app.status = 'LOADED';
-    } catch (error) {
-      console.error('❌ Error unmounting app:', app.name, error);
-      app.status = 'LOAD_ERROR';
-    }
-  }
-
   shouldAppBeActive(app) {
     const currentPath = window.location.pathname;
-    console.log('🔵 Checking if app should be active:', {
+    console.log('🔵 [DEBUG] Checking if app should be active:', {
       app: app.name,
       currentPath,
       activeWhen: app.activeWhen
@@ -124,42 +107,42 @@ class MiniSingleSPA {
     if (Array.isArray(app.activeWhen)) {
       const result = app.activeWhen.some(path => {
         const matches = currentPath.startsWith(path) || currentPath === path;
-        console.log('🔵 Path check:', { path, currentPath, matches });
+        console.log('🔵 [DEBUG] Path check:', { path, currentPath, matches });
         return matches;
       });
-      console.log('🔵 Array result:', result);
+      console.log('🔵 [DEBUG] Array result:', result);
       return result;
     }
 
     if (typeof app.activeWhen === 'string') {
       const result = currentPath.startsWith(app.activeWhen) || currentPath === app.activeWhen;
-      console.log('🔵 String result:', result);
+      console.log('🔵 [DEBUG] String result:', result);
       return result;
     }
 
     if (typeof app.activeWhen === 'function') {
       const result = app.activeWhen(window.location);
-      console.log('🔵 Function result:', result);
+      console.log('🔵 [DEBUG] Function result:', result);
       return result;
     }
 
-    console.log('🔵 Default result: false');
+    console.log('🔵 [DEBUG] Default result: false');
     return false;
   }
 
   start() {
-    console.log('🔵 Starting Mini Single-SPA');
-    console.log('🔵 Registered apps:', this.apps.map(app => ({ name: app.name, status: app.status })));
+    console.log('🔵 [DEBUG] Starting Mini Single-SPA');
+    console.log('🔵 [DEBUG] Registered apps:', this.apps.map(app => ({ name: app.name, status: app.status })));
     this.started = true;
 
     this.apps.forEach(app => {
-      console.log('🔵 Processing app:', app.name, 'Status:', app.status);
+      console.log('🔵 [DEBUG] Processing app:', app.name, 'Status:', app.status);
       if (app.status === 'NOT_LOADED') {
         this.loadAndMountApp(app);
       }
     });
 
-    console.log('✅ Mini Single-SPA started successfully!');
+    console.log('✅ [DEBUG] Mini Single-SPA started successfully!');
   }
 
   getAppNames() {
@@ -170,159 +153,182 @@ class MiniSingleSPA {
 // Create global instance
 const miniSPA = new MiniSingleSPA();
 
-// Simple task microfrontend
-const createTaskMicrofrontend = () => {
-  console.log('🔵 Creating demo task microfrontend...');
-  return Promise.resolve({
-    bootstrap: () => {
-      console.log('🔵 Demo task microfrontend bootstrapping...');
-      return Promise.resolve();
-    },
-
-    mount: () => {
-      console.log('✅ Demo task microfrontend mounting...');
-      
-      const container = document.getElementById('task-mfe-container');
-      if (container) {
-        container.innerHTML = `
-          <div style="
-            padding: 20px; 
-            background: linear-gradient(135deg, #e8f5e8 0%, #c8e6c9 100%); 
-            border: 3px solid #4caf50; 
-            border-radius: 12px; 
-            margin: 20px 0; 
-            text-align: center;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-          ">
-            <h2 style="color: #2e7d32; margin: 0 0 15px 0; font-size: 24px;">
-              🎉 Single-SPA Demo Microfrontend Working!
-            </h2>
-            <p style="color: #388e3c; margin: 0 0 10px 0; font-size: 16px;">
-              This proves that Single-SPA is successfully loading and mounting microfrontends in your Rails app!
-            </p>
-            <div style="background: rgba(255,255,255,0.8); padding: 10px; border-radius: 6px; margin-top: 15px;">
-              <p style="color: #1b5e20; margin: 0; font-size: 14px;">
-                ✅ Microfrontend Status: <strong>MOUNTED</strong><br>
-                🕐 Mounted at: <strong>${new Date().toLocaleTimeString()}</strong><br>
-                📍 Route: <strong>${window.location.pathname}</strong>
-              </p>
-            </div>
-            <div style="margin-top: 15px;">
-              <button onclick="console.log('Mini Single-SPA Debug:', window.miniSPA)" 
-                      style="background: #4caf50; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer;">
-                Debug in Console
-              </button>
-            </div>
-          </div>
-        `;
-        console.log('✅ Demo task microfrontend mounted successfully');
-      } else {
-        console.error('❌ Container #task-mfe-container not found');
-      }
-      return Promise.resolve();
-    },
-
-    unmount: () => {
-      console.log('🔵 Demo task microfrontend unmounting...');
-      const container = document.getElementById('task-mfe-container');
-      if (container) {
-        container.innerHTML = '<div style="text-align: center; color: #666; padding: 40px;">Loading Single-SPA Demo Microfrontend...</div>';
-      }
-      return Promise.resolve();
-    }
-  });
-};
-
 // Initialize Single-SPA
 function initSingleSPA() {
-  console.log('🔵 Initializing Single-SPA system...');
+  console.log('🔵 [DEBUG] Initializing Single-SPA system...');
 
-  // Register the Header microfrontend (appears on ALL routes)
-  miniSPA.registerApplication({
-    name: 'header-mfe',
-    loadApp: async () => {
-      console.log('🔵 Header MFE loadApp called...');
-      try {
-        const module = await import('microfrontends/header-mfe');
-        console.log('🔵 Header module imported:', module);
-        
-        if (module.default && typeof module.default === 'function') {
-          const appInstance = await module.default();
-          console.log('🔵 Header app instance created:', appInstance);
-          return appInstance;
-        } else {
-          throw new Error('Header module does not export a default function');
-        }
-      } catch (error) {
-        console.error('❌ Header loadApp error:', error);
-        throw error;
-      }
-    },
-    activeWhen: () => true, // Always active on all routes
-    customProps: {
-      domElement: 'header-mfe-container'
-    }
-  });
-
-  // Register the Login microfrontend (only on login page)
-  miniSPA.registerApplication({
-    name: 'login-mfe',
-    loadApp: async () => {
-      console.log('🔵 Login MFE loadApp called...');
-      try {
-        const module = await import('microfrontends/login-mfe');
-        console.log('🔵 Login module imported:', module);
-        
-        if (module.default && typeof module.default === 'function') {
-          const appInstance = await module.default();
-          console.log('🔵 Login app instance created:', appInstance);
-          return appInstance;
-        } else {
-          throw new Error('Login module does not export a default function');
-        }
-      } catch (error) {
-        console.error('❌ Login loadApp error:', error);
-        throw error;
-      }
-    },
-    activeWhen: ['/session/new', '/session'], // Active on login routes
-    customProps: {
-      domElement: 'login-mfe-container'
-    }
-  });
-
-  // Register the demo task microfrontend
-  // miniSPA.registerApplication({
-  //   name: 'task-mfe',
-  //   loadApp: createTaskMicrofrontend,
-  //   activeWhen: ['/tasks', '/'],
-  //   customProps: {
-  //     domElement: 'task-mfe-container'
-  //   }
-  // });
-
-  // Register the TaskList microfrontend with enhanced error handling
+  // Register the external TaskList MFE (DEBUG VERSION)
   miniSPA.registerApplication({
     name: 'tasklist-mfe',
     loadApp: async () => {
-      console.log('🔵 TaskList MFE loadApp called...');
+      console.log('🔵 [DEBUG] Starting TaskList MFE load process...');
+      console.log('🔵 [DEBUG] Current window globals:', {
+        React: typeof window.React,
+        ReactDOM: typeof window.ReactDOM,
+        location: window.location.href
+      });
+      
       try {
-        const module = await import('microfrontends/tasklist-mfe');
-        console.log('🔵 TaskList module imported:', module);
+        // Step 1: Check container exists
+        const container = document.getElementById('tasklist-mfe-container');
+        console.log('🔵 [DEBUG] Container check:', {
+          exists: !!container,
+          id: container?.id,
+          innerHTML: container?.innerHTML?.substring(0, 100)
+        });
         
-        if (module.default && typeof module.default === 'function') {
-          const appInstance = await module.default();
-          console.log('🔵 TaskList app instance created:', appInstance);
-          return appInstance;
-        } else {
-          throw new Error('TaskList module does not export a default function');
+        if (!container) {
+          throw new Error('tasklist-mfe-container not found in DOM');
         }
+        
+        // Step 2: Load React dependencies
+        console.log('🔵 [DEBUG] Checking React dependencies...');
+        
+        if (typeof window.React === 'undefined') {
+          console.log('🔵 [DEBUG] Loading React...');
+          await new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = 'https://unpkg.com/react@18/umd/react.development.js';
+            script.onload = () => {
+              console.log('🔵 [DEBUG] React loaded, type:', typeof window.React);
+              resolve();
+            };
+            script.onerror = (error) => {
+              console.error('❌ [DEBUG] React load failed:', error);
+              reject(error);
+            };
+            document.head.appendChild(script);
+          });
+        }
+        
+        if (typeof window.ReactDOM === 'undefined') {
+          console.log('🔵 [DEBUG] Loading ReactDOM...');
+          await new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = 'https://unpkg.com/react-dom@18/umd/react-dom.development.js';
+            script.onload = () => {
+              console.log('🔵 [DEBUG] ReactDOM loaded, type:', typeof window.ReactDOM);
+              resolve();
+            };
+            script.onerror = (error) => {
+              console.error('❌ [DEBUG] ReactDOM load failed:', error);
+              reject(error);
+            };
+            document.head.appendChild(script);
+          });
+        }
+        
+        console.log('🔵 [DEBUG] React dependencies ready:', {
+          React: typeof window.React,
+          ReactDOM: typeof window.ReactDOM
+        });
+        
+        // Step 3: Test MFE URL accessibility
+        console.log('🔵 [DEBUG] Testing MFE URL accessibility...');
+        const testUrl = 'http://localhost:8081/tasklist-mfe.js';
+        
+        try {
+          const testResponse = await fetch(testUrl, { method: 'HEAD' });
+          console.log('🔵 [DEBUG] MFE URL test:', {
+            url: testUrl,
+            status: testResponse.status,
+            ok: testResponse.ok
+          });
+        } catch (fetchError) {
+          console.error('❌ [DEBUG] MFE URL not accessible:', {
+            url: testUrl,
+            error: fetchError.message
+          });
+          throw new Error(`MFE server not running or not accessible: ${fetchError.message}`);
+        }
+        
+        // Step 4: Load the MFE script
+        console.log('🔵 [DEBUG] Loading MFE script...');
+        const scriptId = 'tasklist-mfe-script';
+        
+        // Remove existing script
+        const existingScript = document.getElementById(scriptId);
+        if (existingScript) {
+          console.log('🔵 [DEBUG] Removing existing MFE script');
+          existingScript.remove();
+        }
+        
+        // Load new script
+        const loadResult = await new Promise((resolve, reject) => {
+          const script = document.createElement('script');
+          script.id = scriptId;
+          script.src = testUrl;
+          
+          script.onload = () => {
+            console.log('🔵 [DEBUG] MFE script loaded successfully');
+            console.log('🔵 [DEBUG] Post-load window check:', {
+              tasklistMfe: typeof window.tasklistMfe,
+              tasklistMfeKeys: window.tasklistMfe ? Object.keys(window.tasklistMfe) : 'N/A'
+            });
+            
+            // Wait for global to be available
+            let attempts = 0;
+            const maxAttempts = 10;
+            
+            const checkGlobal = () => {
+              attempts++;
+              console.log(`🔵 [DEBUG] Global check attempt ${attempts}/${maxAttempts}`);
+              
+              if (window.tasklistMfe && 
+                  typeof window.tasklistMfe.bootstrap === 'function' &&
+                  typeof window.tasklistMfe.mount === 'function' &&
+                  typeof window.tasklistMfe.unmount === 'function') {
+                
+                console.log('✅ [DEBUG] MFE global found with all required methods:', {
+                  bootstrap: typeof window.tasklistMfe.bootstrap,
+                  mount: typeof window.tasklistMfe.mount,
+                  unmount: typeof window.tasklistMfe.unmount
+                });
+                
+                resolve({
+                  bootstrap: window.tasklistMfe.bootstrap,
+                  mount: window.tasklistMfe.mount,
+                  unmount: window.tasklistMfe.unmount
+                });
+              } else if (attempts >= maxAttempts) {
+                console.error('❌ [DEBUG] MFE global not found after max attempts:', {
+                  attempts: maxAttempts,
+                  windowTasklistMfe: window.tasklistMfe,
+                  type: typeof window.tasklistMfe
+                });
+                reject(new Error('TaskList MFE global not found after multiple attempts'));
+              } else {
+                setTimeout(checkGlobal, 100);
+              }
+            };
+            
+            checkGlobal();
+          };
+          
+          script.onerror = (error) => {
+            console.error('❌ [DEBUG] MFE script load failed:', {
+              error: error,
+              src: script.src
+            });
+            reject(new Error('Failed to load TaskList MFE script'));
+          };
+          
+          console.log('🔵 [DEBUG] Appending MFE script to head');
+          document.head.appendChild(script);
+        });
+        
+        console.log('✅ [DEBUG] MFE load process completed successfully');
+        return loadResult;
+        
       } catch (error) {
-        console.error('❌ TaskList loadApp error:', error);
+        console.error('❌ [DEBUG] MFE load process failed:', {
+          error: error.message,
+          stack: error.stack
+        });
         throw error;
       }
     },
-    activeWhen: ['/tasks'], // Will match /tasks, /tasks/1, /tasks/edit, etc.
+    activeWhen: ['/tasks'],
     customProps: {
       domElement: 'tasklist-mfe-container'
     }
@@ -338,36 +344,31 @@ function initSingleSPA() {
     apps: miniSPA.apps
   };
 
-  console.log('✅ Single-SPA system fully initialized!');
+  console.log('✅ [DEBUG] Single-SPA system fully initialized!');
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-  console.log('🟢 DOM loaded, initializing Single-SPA...');
+  console.log('🟢 [DEBUG] DOM loaded, initializing Single-SPA...');
   initSingleSPA();
 });
 
-// Handle Turbo navigation - FIXED VERSION
+// Handle Turbo navigation
 document.addEventListener('turbo:load', function() {
-  console.log('🟡 Turbo navigation detected');
-  console.log('🟡 Current path:', window.location.pathname);
+  console.log('🟡 [DEBUG] Turbo navigation detected');
+  console.log('🟡 [DEBUG] Current path:', window.location.pathname);
   
   // Re-evaluate apps for new route
   if (window.miniSPA && window.miniSPA.started) {
-    console.log('🔵 Re-evaluating apps for route:', window.location.pathname);
+    console.log('🔵 [DEBUG] Re-evaluating apps for route:', window.location.pathname);
     
     // Process each app for the new route
     const processApps = async () => {
       for (const app of window.miniSPA.apps) {
         const shouldBeActive = window.miniSPA.shouldAppBeActive(app);
-        console.log(`🔵 App ${app.name}: shouldBeActive=${shouldBeActive}, currentStatus=${app.status}`);
+        console.log(`🔵 [DEBUG] App ${app.name}: shouldBeActive=${shouldBeActive}, currentStatus=${app.status}`);
         
-        if (!shouldBeActive && app.status === 'MOUNTED') {
-          // Unmount apps that should no longer be active
-          console.log(`🔵 Unmounting ${app.name} because it should not be active`);
-          await window.miniSPA.unmountApp(app);
-        } else if (shouldBeActive && (app.status === 'LOADED' || app.status === 'NOT_LOADED')) {
-          // Mount apps that should be active
-          console.log(`🔵 Loading/mounting ${app.name} because it should be active`);
+        if (shouldBeActive && (app.status === 'LOADED' || app.status === 'NOT_LOADED')) {
+          console.log(`🔵 [DEBUG] Loading/mounting ${app.name} because it should be active`);
           await window.miniSPA.loadAndMountApp(app);
         }
       }
@@ -375,25 +376,7 @@ document.addEventListener('turbo:load', function() {
     
     processApps();
   } else {
-    console.log('🔵 Mini Single-SPA not ready, initializing...');
+    console.log('🔵 [DEBUG] Mini Single-SPA not ready, initializing...');
     initSingleSPA();
-  }
-});
-
-// Handle turbo:before-cache to clean up before page caching
-document.addEventListener('turbo:before-cache', function() {
-  console.log('🟡 Turbo before cache - cleaning up microfrontends');
-  
-  if (window.miniSPA && window.miniSPA.started) {
-    const cleanupApps = async () => {
-      for (const app of window.miniSPA.apps) {
-        if (app.status === 'MOUNTED') {
-          console.log(`🔵 Cleaning up ${app.name} before cache`);
-          await window.miniSPA.unmountApp(app);
-        }
-      }
-    };
-    
-    cleanupApps();
   }
 });

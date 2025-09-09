@@ -157,11 +157,11 @@ const miniSPA = new MiniSingleSPA();
 function initSingleSPA() {
   console.log('🔵 [DEBUG] Initializing Single-SPA system...');
 
-  // Register the external TaskList MFE (DEBUG VERSION)
+  // Register the Header MFE (always active)
   miniSPA.registerApplication({
-    name: 'tasklist-mfe',
+    name: 'header-mfe',
     loadApp: async () => {
-      console.log('🔵 [DEBUG] Starting TaskList MFE load process...');
+      console.log('🔵 [DEBUG] Starting Header MFE load process...');
       console.log('🔵 [DEBUG] Current window globals:', {
         React: typeof window.React,
         ReactDOM: typeof window.ReactDOM,
@@ -170,7 +170,7 @@ function initSingleSPA() {
       
       try {
         // Step 1: Check container exists
-        const container = document.getElementById('tasklist-mfe-container');
+        const container = document.getElementById('header-mfe-container');
         console.log('🔵 [DEBUG] Container check:', {
           exists: !!container,
           id: container?.id,
@@ -178,7 +178,7 @@ function initSingleSPA() {
         });
         
         if (!container) {
-          throw new Error('tasklist-mfe-container not found in DOM');
+          throw new Error('header-mfe-container not found in DOM');
         }
         
         // Step 2: Load React dependencies
@@ -224,32 +224,32 @@ function initSingleSPA() {
         });
         
         // Step 3: Test MFE URL accessibility
-        console.log('🔵 [DEBUG] Testing MFE URL accessibility...');
-        const testUrl = 'http://localhost:8081/tasklist-mfe.js';
+        console.log('🔵 [DEBUG] Testing Header MFE URL accessibility...');
+        const testUrl = 'http://localhost:8082/header-mfe.js';
         
         try {
           const testResponse = await fetch(testUrl, { method: 'HEAD' });
-          console.log('🔵 [DEBUG] MFE URL test:', {
+          console.log('🔵 [DEBUG] Header MFE URL test:', {
             url: testUrl,
             status: testResponse.status,
             ok: testResponse.ok
           });
         } catch (fetchError) {
-          console.error('❌ [DEBUG] MFE URL not accessible:', {
+          console.error('❌ [DEBUG] Header MFE URL not accessible:', {
             url: testUrl,
             error: fetchError.message
           });
-          throw new Error(`MFE server not running or not accessible: ${fetchError.message}`);
+          throw new Error(`Header MFE server not running or not accessible: ${fetchError.message}`);
         }
         
         // Step 4: Load the MFE script
-        console.log('🔵 [DEBUG] Loading MFE script...');
-        const scriptId = 'tasklist-mfe-script';
+        console.log('🔵 [DEBUG] Loading Header MFE script...');
+        const scriptId = 'header-mfe-script';
         
         // Remove existing script
         const existingScript = document.getElementById(scriptId);
         if (existingScript) {
-          console.log('🔵 [DEBUG] Removing existing MFE script');
+          console.log('🔵 [DEBUG] Removing existing Header MFE script');
           existingScript.remove();
         }
         
@@ -260,7 +260,148 @@ function initSingleSPA() {
           script.src = testUrl;
           
           script.onload = () => {
-            console.log('🔵 [DEBUG] MFE script loaded successfully');
+            console.log('🔵 [DEBUG] Header MFE script loaded successfully');
+            console.log('🔵 [DEBUG] Post-load window check:', {
+              headerMfe: typeof window.headerMfe,
+              headerMfeKeys: window.headerMfe ? Object.keys(window.headerMfe) : 'N/A'
+            });
+            
+            // Wait for global to be available
+            let attempts = 0;
+            const maxAttempts = 10;
+            
+            const checkGlobal = () => {
+              attempts++;
+              console.log(`🔵 [DEBUG] Global check attempt ${attempts}/${maxAttempts}`);
+              
+              if (window.headerMfe && 
+                  typeof window.headerMfe.bootstrap === 'function' &&
+                  typeof window.headerMfe.mount === 'function' &&
+                  typeof window.headerMfe.unmount === 'function') {
+                
+                console.log('✅ [DEBUG] Header MFE global found with all required methods:', {
+                  bootstrap: typeof window.headerMfe.bootstrap,
+                  mount: typeof window.headerMfe.mount,
+                  unmount: typeof window.headerMfe.unmount
+                });
+                
+                resolve({
+                  bootstrap: window.headerMfe.bootstrap,
+                  mount: window.headerMfe.mount,
+                  unmount: window.headerMfe.unmount
+                });
+              } else if (attempts >= maxAttempts) {
+                console.error('❌ [DEBUG] Header MFE global not found after max attempts:', {
+                  attempts: maxAttempts,
+                  windowHeaderMfe: window.headerMfe,
+                  type: typeof window.headerMfe
+                });
+                reject(new Error('Header MFE global not found after multiple attempts'));
+              } else {
+                setTimeout(checkGlobal, 100);
+              }
+            };
+            
+            checkGlobal();
+          };
+          
+          script.onerror = (error) => {
+            console.error('❌ [DEBUG] Header MFE script load failed:', {
+              error: error,
+              src: script.src
+            });
+            reject(new Error('Failed to load Header MFE script'));
+          };
+          
+          console.log('🔵 [DEBUG] Appending Header MFE script to head');
+          document.head.appendChild(script);
+        });
+        
+        console.log('✅ [DEBUG] Header MFE load process completed successfully');
+        return loadResult;
+        
+      } catch (error) {
+        console.error('❌ [DEBUG] Header MFE load process failed:', {
+          error: error.message,
+          stack: error.stack
+        });
+        throw error;
+      }
+    },
+    activeWhen: () => true, // Header is always active
+    customProps: {
+      domElement: 'header-mfe-container'
+    }
+  });
+
+  // Register the TaskList MFE (only active on /tasks)
+  miniSPA.registerApplication({
+    name: 'tasklist-mfe',
+    loadApp: async () => {
+      console.log('🔵 [DEBUG] Starting TaskList MFE load process...');
+      console.log('🔵 [DEBUG] Current window globals:', {
+        React: typeof window.React,
+        ReactDOM: typeof window.ReactDOM,
+        location: window.location.href
+      });
+      
+      try {
+        // Step 1: Check container exists
+        const container = document.getElementById('tasklist-mfe-container');
+        console.log('🔵 [DEBUG] Container check:', {
+          exists: !!container,
+          id: container?.id,
+          innerHTML: container?.innerHTML?.substring(0, 100)
+        });
+        
+        if (!container) {
+          throw new Error('tasklist-mfe-container not found in DOM');
+        }
+        
+        // Step 2: Load React dependencies (reuse from header)
+        console.log('🔵 [DEBUG] React dependencies already loaded:', {
+          React: typeof window.React,
+          ReactDOM: typeof window.ReactDOM
+        });
+        
+        // Step 3: Test MFE URL accessibility
+        console.log('🔵 [DEBUG] Testing TaskList MFE URL accessibility...');
+        const testUrl = 'http://localhost:8081/tasklist-mfe.js';
+        
+        try {
+          const testResponse = await fetch(testUrl, { method: 'HEAD' });
+          console.log('🔵 [DEBUG] TaskList MFE URL test:', {
+            url: testUrl,
+            status: testResponse.status,
+            ok: testResponse.ok
+          });
+        } catch (fetchError) {
+          console.error('❌ [DEBUG] TaskList MFE URL not accessible:', {
+            url: testUrl,
+            error: fetchError.message
+          });
+          throw new Error(`TaskList MFE server not running or not accessible: ${fetchError.message}`);
+        }
+        
+        // Step 4: Load the MFE script
+        console.log('🔵 [DEBUG] Loading TaskList MFE script...');
+        const scriptId = 'tasklist-mfe-script';
+        
+        // Remove existing script
+        const existingScript = document.getElementById(scriptId);
+        if (existingScript) {
+          console.log('🔵 [DEBUG] Removing existing TaskList MFE script');
+          existingScript.remove();
+        }
+        
+        // Load new script
+        const loadResult = await new Promise((resolve, reject) => {
+          const script = document.createElement('script');
+          script.id = scriptId;
+          script.src = testUrl;
+          
+          script.onload = () => {
+            console.log('🔵 [DEBUG] TaskList MFE script loaded successfully');
             console.log('🔵 [DEBUG] Post-load window check:', {
               tasklistMfe: typeof window.tasklistMfe,
               tasklistMfeKeys: window.tasklistMfe ? Object.keys(window.tasklistMfe) : 'N/A'
@@ -279,7 +420,7 @@ function initSingleSPA() {
                   typeof window.tasklistMfe.mount === 'function' &&
                   typeof window.tasklistMfe.unmount === 'function') {
                 
-                console.log('✅ [DEBUG] MFE global found with all required methods:', {
+                console.log('✅ [DEBUG] TaskList MFE global found with all required methods:', {
                   bootstrap: typeof window.tasklistMfe.bootstrap,
                   mount: typeof window.tasklistMfe.mount,
                   unmount: typeof window.tasklistMfe.unmount
@@ -291,7 +432,7 @@ function initSingleSPA() {
                   unmount: window.tasklistMfe.unmount
                 });
               } else if (attempts >= maxAttempts) {
-                console.error('❌ [DEBUG] MFE global not found after max attempts:', {
+                console.error('❌ [DEBUG] TaskList MFE global not found after max attempts:', {
                   attempts: maxAttempts,
                   windowTasklistMfe: window.tasklistMfe,
                   type: typeof window.tasklistMfe
@@ -306,22 +447,22 @@ function initSingleSPA() {
           };
           
           script.onerror = (error) => {
-            console.error('❌ [DEBUG] MFE script load failed:', {
+            console.error('❌ [DEBUG] TaskList MFE script load failed:', {
               error: error,
               src: script.src
             });
             reject(new Error('Failed to load TaskList MFE script'));
           };
           
-          console.log('🔵 [DEBUG] Appending MFE script to head');
+          console.log('🔵 [DEBUG] Appending TaskList MFE script to head');
           document.head.appendChild(script);
         });
         
-        console.log('✅ [DEBUG] MFE load process completed successfully');
+        console.log('✅ [DEBUG] TaskList MFE load process completed successfully');
         return loadResult;
         
       } catch (error) {
-        console.error('❌ [DEBUG] MFE load process failed:', {
+        console.error('❌ [DEBUG] TaskList MFE load process failed:', {
           error: error.message,
           stack: error.stack
         });

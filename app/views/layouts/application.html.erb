@@ -30,7 +30,7 @@
   </head>
 
   <body>
-    <!-- Header Microfrontend Container (replaces original nav) -->
+    <!-- Header Microfrontend Container -->
     <div id="header-mfe-container">
       <div style="text-align: center; color: #666; padding: 10px; background: #f5f5f5; border-bottom: 1px solid #ddd;">
         Loading Header Microfrontend...
@@ -41,8 +41,6 @@
       <%= yield %>
     </main>
     
-    
-
     <!-- Make user data available globally for microfrontends -->
     <script>
       <% if authenticated? %>

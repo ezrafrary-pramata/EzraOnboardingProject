@@ -5,16 +5,6 @@ import singleSpaReact from 'single-spa-react';
 import TaskList from './TaskList';
 
 console.log('🔵 [MFE-DEBUG] TaskList MFE Loading...');
-console.log('🔵 [MFE-DEBUG] Environment check:', {
-  React: typeof React,
-  ReactDOM: typeof ReactDOM,
-  createRoot: typeof createRoot,
-  singleSpaReact: typeof singleSpaReact,
-  TaskList: typeof TaskList,
-  windowReact: typeof window.React,
-  windowReactDOM: typeof window.ReactDOM,
-  userAgent: navigator.userAgent.substring(0, 50)
-});
 
 // Use global React if available, fallback to imports
 const ReactToUse = window.React || React;
@@ -31,11 +21,7 @@ const lifecycles = singleSpaReact({
   createRoot,
   rootComponent: TaskList,
   errorBoundary: (err, info, props) => {
-    console.error('🔴 [MFE-DEBUG] TaskList MFE Error Boundary:', {
-      error: err,
-      errorInfo: info,
-      props: props
-    });
+    console.error('🔴 [MFE-DEBUG] TaskList MFE Error Boundary:', err);
     return React.createElement('div', {
       style: { 
         color: 'red', 
@@ -47,14 +33,7 @@ const lifecycles = singleSpaReact({
       }
     }, [
       React.createElement('h3', { key: 'title' }, '❌ TaskList MFE Error'),
-      React.createElement('p', { key: 'message' }, err.message),
-      React.createElement('details', { key: 'details' }, [
-        React.createElement('summary', { key: 'summary' }, 'Error Details'),
-        React.createElement('pre', { 
-          key: 'stack', 
-          style: { fontSize: '12px', overflow: 'auto', maxHeight: '200px' } 
-        }, err.stack)
-      ])
+      React.createElement('p', { key: 'message' }, err.message)
     ]);
   }
 });
@@ -131,14 +110,3 @@ try {
 export default globalExport;
 
 console.log('✅ [MFE-DEBUG] TaskList MFE initialization complete');
-
-// Debug helper for manual testing
-window.debugMFE = () => {
-  console.log('🔍 [MFE-DEBUG] Manual debug check:', {
-    windowTasklistMfe: window.tasklistMfe,
-    methods: window.tasklistMfe ? Object.keys(window.tasklistMfe) : 'N/A',
-    container: document.getElementById('tasklist-mfe-container'),
-    React: typeof window.React,
-    ReactDOM: typeof window.ReactDOM
-  });
-};

@@ -5,16 +5,6 @@ import singleSpaReact from 'single-spa-react';
 import Header from './Header';
 
 console.log('🔵 [MFE-DEBUG] Header MFE Loading...');
-console.log('🔵 [MFE-DEBUG] Environment check:', {
-  React: typeof React,
-  ReactDOM: typeof ReactDOM,
-  createRoot: typeof createRoot,
-  singleSpaReact: typeof singleSpaReact,
-  Header: typeof Header,
-  windowReact: typeof window.React,
-  windowReactDOM: typeof window.ReactDOM,
-  userAgent: navigator.userAgent.substring(0, 50)
-});
 
 // Use global React if available, fallback to imports
 const ReactToUse = window.React || React;
@@ -31,11 +21,7 @@ const lifecycles = singleSpaReact({
   createRoot,
   rootComponent: Header,
   errorBoundary: (err, info, props) => {
-    console.error('🔴 [MFE-DEBUG] Header MFE Error Boundary:', {
-      error: err,
-      errorInfo: info,
-      props: props
-    });
+    console.error('🔴 [MFE-DEBUG] Header MFE Error Boundary:', err);
     return React.createElement('div', {
       style: { 
         color: 'red', 
@@ -47,14 +33,7 @@ const lifecycles = singleSpaReact({
       }
     }, [
       React.createElement('h3', { key: 'title' }, '❌ Header MFE Error'),
-      React.createElement('p', { key: 'message' }, err.message),
-      React.createElement('details', { key: 'details' }, [
-        React.createElement('summary', { key: 'summary' }, 'Error Details'),
-        React.createElement('pre', { 
-          key: 'stack', 
-          style: { fontSize: '12px', overflow: 'auto', maxHeight: '200px' } 
-        }, err.stack)
-      ])
+      React.createElement('p', { key: 'message' }, err.message)
     ]);
   }
 });
@@ -121,14 +100,3 @@ try {
 export default globalExport;
 
 console.log('✅ [MFE-DEBUG] Header MFE initialization complete');
-
-// Debug helper for manual testing
-window.debugHeaderMFE = () => {
-  console.log('🔍 [MFE-DEBUG] Manual debug check:', {
-    windowHeaderMfe: window.headerMfe,
-    methods: window.headerMfe ? Object.keys(window.headerMfe) : 'N/A',
-    container: document.getElementById('header-mfe-container'),
-    React: typeof window.React,
-    ReactDOM: typeof window.ReactDOM
-  });
-};

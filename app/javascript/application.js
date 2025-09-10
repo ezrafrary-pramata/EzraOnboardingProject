@@ -4,11 +4,12 @@ import "controllers"
 
 console.log('🟢 Application.js loaded');
 
-// Self-contained Single-SPA implementation (no external dependencies)
+// Custom MFE Management without Single-SPA React dependency conflicts
 class MiniSingleSPA {
   constructor() {
     this.apps = [];
     this.started = false;
+    this.currentPath = '';
     console.log('🔵 Mini Single-SPA initialized');
   }
 
@@ -20,30 +21,56 @@ class MiniSingleSPA {
       activeWhen: config.activeWhen,
       customProps: config.customProps || {},
       status: 'NOT_LOADED',
-      appInstance: null
+      appInstance: null,
+      mountedAt: null
     });
 
     if (this.started) {
-      this.loadAndMountApp(this.apps[this.apps.length - 1]);
+      this.evaluateApps();
+    }
+  }
+
+  async evaluateApps() {
+    const currentPath = window.location.pathname;
+    console.log('🔵 [DEBUG] Evaluating apps for path:', currentPath);
+    
+    this.currentPath = currentPath;
+    
+    for (const app of this.apps) {
+      const shouldBeActive = this.shouldAppBeActive(app);
+      const container = document.getElementById(app.customProps.domElement);
+      
+      console.log(`🔵 [DEBUG] App ${app.name}: shouldBeActive=${shouldBeActive}, hasContainer=${!!container}, status=${app.status}`);
+      
+      if (!container) {
+        console.warn(`⚠️ Container #${app.customProps.domElement} not found for ${app.name}`);
+        continue;
+      }
+      
+      if (shouldBeActive && app.status !== 'MOUNTED') {
+        await this.loadAndMountApp(app);
+      } else if (!shouldBeActive && app.status === 'MOUNTED') {
+        await this.unmountApp(app);
+      }
     }
   }
 
   async loadAndMountApp(app) {
     try {
-      console.log('🔵 [DEBUG] Loading app:', app.name);
-      console.log('🔵 [DEBUG] Current path:', window.location.pathname);
-      console.log('🔵 [DEBUG] Should be active:', this.shouldAppBeActive(app));
+      console.log('🔵 [DEBUG] Loading and mounting app:', app.name);
       
-      // Check if container exists before proceeding
       const container = document.getElementById(app.customProps.domElement);
       if (!container) {
         console.warn(`⚠️ Container #${app.customProps.domElement} not found for ${app.name}, skipping`);
         return;
       }
       
+      // Clear any existing content
+      container.innerHTML = '<div style="text-align: center; color: #666; padding: 20px;">Loading Microfrontend...</div>';
+      
       app.status = 'LOADING';
 
-      // Only load the module if we haven't loaded it yet
+      // Load the module if we haven't loaded it yet
       if (!app.appInstance) {
         console.log('🔵 [DEBUG] Calling loadApp function for:', app.name);
         const appModule = await app.loadApp();
@@ -53,28 +80,41 @@ class MiniSingleSPA {
       
       app.status = 'LOADED';
 
-      if (this.shouldAppBeActive(app)) {
-        console.log('🔵 [DEBUG] Mounting app:', app.name);
-        app.status = 'MOUNTING';
+      // Create proper props for the MFE - this is the key fix!
+      const mfeProps = {
+        name: app.name,
+        appName: app.name,
+        // This ensures Single-SPA React gets the actual DOM element, not a string
+        domElement: container,
+        // Also provide the traditional domElementGetter that returns the element
+        domElementGetter: () => container,
+        ...app.customProps
+      };
 
-        if (app.appInstance.bootstrap) {
-          console.log('🔵 [DEBUG] Bootstrapping app:', app.name);
-          await app.appInstance.bootstrap(app.customProps);
-        }
+      console.log('🔵 [DEBUG] MFE props:', {
+        name: mfeProps.name,
+        domElement: mfeProps.domElement,
+        domElementType: typeof mfeProps.domElement,
+        isHTMLElement: mfeProps.domElement instanceof HTMLElement
+      });
 
-        if (app.appInstance.mount) {
-          console.log('🔵 [DEBUG] Mounting app:', app.name);
-          await app.appInstance.mount(app.customProps);
-        }
-
-        app.status = 'MOUNTED';
-        console.log('✅ [DEBUG] App mounted successfully:', app.name);
-      } else {
-        console.log('🟡 [DEBUG] App should not be active:', app.name);
+      // Bootstrap if needed
+      if (app.appInstance.bootstrap) {
+        console.log('🔵 [DEBUG] Bootstrapping app:', app.name);
+        await app.appInstance.bootstrap(mfeProps);
       }
+
+      // Mount the app
+      if (app.appInstance.mount) {
+        console.log('🔵 [DEBUG] Mounting app:', app.name);
+        await app.appInstance.mount(mfeProps);
+        app.status = 'MOUNTED';
+        app.mountedAt = this.currentPath;
+        console.log('✅ [DEBUG] App mounted successfully:', app.name);
+      }
+      
     } catch (error) {
       console.error('❌ [DEBUG] Error loading/mounting app:', app.name, error);
-      console.error('❌ [DEBUG] Error stack:', error.stack);
       app.status = 'LOAD_ERROR';
       
       // Show error in UI
@@ -90,58 +130,70 @@ class MiniSingleSPA {
               <summary style="cursor: pointer; color: #d32f2f;">Show Stack Trace</summary>
               <pre style="font-size: 10px; overflow: auto; max-height: 200px; background: #fff; padding: 10px; margin-top: 5px;">${error.stack}</pre>
             </details>
+            <button onclick="window.location.reload()" style="margin-top: 10px; padding: 5px 10px; background: #d32f2f; color: white; border: none; border-radius: 4px; cursor: pointer;">
+              Refresh Page
+            </button>
           </div>
         `;
       }
     }
   }
 
+  async unmountApp(app) {
+    try {
+      console.log('🔵 [DEBUG] Unmounting app:', app.name);
+      
+      if (app.appInstance && app.appInstance.unmount) {
+        const container = document.getElementById(app.customProps.domElement);
+        const mfeProps = {
+          name: app.name,
+          appName: app.name,
+          domElement: container,
+          domElementGetter: () => container,
+          ...app.customProps
+        };
+        await app.appInstance.unmount(mfeProps);
+      }
+      
+      app.status = 'LOADED';
+      app.mountedAt = null;
+      
+      // Clear container
+      const container = document.getElementById(app.customProps.domElement);
+      if (container) {
+        container.innerHTML = '<div style="text-align: center; color: #666; padding: 10px;">Microfrontend Unloaded</div>';
+      }
+      
+      console.log('✅ [DEBUG] App unmounted successfully:', app.name);
+    } catch (error) {
+      console.error('❌ [DEBUG] Error unmounting app:', app.name, error);
+    }
+  }
+
   shouldAppBeActive(app) {
     const currentPath = window.location.pathname;
-    console.log('🔵 [DEBUG] Checking if app should be active:', {
-      app: app.name,
-      currentPath,
-      activeWhen: app.activeWhen
-    });
-
+    
     if (Array.isArray(app.activeWhen)) {
-      const result = app.activeWhen.some(path => {
-        const matches = currentPath.startsWith(path) || currentPath === path;
-        console.log('🔵 [DEBUG] Path check:', { path, currentPath, matches });
-        return matches;
+      return app.activeWhen.some(path => {
+        return currentPath.startsWith(path) || currentPath === path;
       });
-      console.log('🔵 [DEBUG] Array result:', result);
-      return result;
     }
 
     if (typeof app.activeWhen === 'string') {
-      const result = currentPath.startsWith(app.activeWhen) || currentPath === app.activeWhen;
-      console.log('🔵 [DEBUG] String result:', result);
-      return result;
+      return currentPath.startsWith(app.activeWhen) || currentPath === app.activeWhen;
     }
 
     if (typeof app.activeWhen === 'function') {
-      const result = app.activeWhen(window.location);
-      console.log('🔵 [DEBUG] Function result:', result);
-      return result;
+      return app.activeWhen(window.location);
     }
 
-    console.log('🔵 [DEBUG] Default result: false');
     return false;
   }
 
   start() {
     console.log('🔵 [DEBUG] Starting Mini Single-SPA');
-    console.log('🔵 [DEBUG] Registered apps:', this.apps.map(app => ({ name: app.name, status: app.status })));
     this.started = true;
-
-    this.apps.forEach(app => {
-      console.log('🔵 [DEBUG] Processing app:', app.name, 'Status:', app.status);
-      if (app.status === 'NOT_LOADED') {
-        this.loadAndMountApp(app);
-      }
-    });
-
+    this.evaluateApps();
     console.log('✅ [DEBUG] Mini Single-SPA started successfully!');
   }
 
@@ -162,310 +214,131 @@ function initSingleSPA() {
     name: 'header-mfe',
     loadApp: async () => {
       console.log('🔵 [DEBUG] Starting Header MFE load process...');
-      console.log('🔵 [DEBUG] Current window globals:', {
-        React: typeof window.React,
-        ReactDOM: typeof window.ReactDOM,
-        location: window.location.href
-      });
       
       try {
-        // Step 1: Check container exists
+        // Check container exists
         const container = document.getElementById('header-mfe-container');
-        console.log('🔵 [DEBUG] Container check:', {
-          exists: !!container,
-          id: container?.id,
-          innerHTML: container?.innerHTML?.substring(0, 100)
-        });
-        
         if (!container) {
           throw new Error('header-mfe-container not found in DOM');
         }
         
-        // Step 2: Load React dependencies
-        console.log('🔵 [DEBUG] Checking React dependencies...');
-        
+        // Load React dependencies
         if (typeof window.React === 'undefined') {
-          console.log('🔵 [DEBUG] Loading React...');
           await new Promise((resolve, reject) => {
             const script = document.createElement('script');
             script.src = 'https://unpkg.com/react@18/umd/react.development.js';
-            script.onload = () => {
-              console.log('🔵 [DEBUG] React loaded, type:', typeof window.React);
-              resolve();
-            };
-            script.onerror = (error) => {
-              console.error('❌ [DEBUG] React load failed:', error);
-              reject(error);
-            };
+            script.onload = resolve;
+            script.onerror = reject;
             document.head.appendChild(script);
           });
         }
         
         if (typeof window.ReactDOM === 'undefined') {
-          console.log('🔵 [DEBUG] Loading ReactDOM...');
           await new Promise((resolve, reject) => {
             const script = document.createElement('script');
             script.src = 'https://unpkg.com/react-dom@18/umd/react-dom.development.js';
-            script.onload = () => {
-              console.log('🔵 [DEBUG] ReactDOM loaded, type:', typeof window.ReactDOM);
-              resolve();
-            };
-            script.onerror = (error) => {
-              console.error('❌ [DEBUG] ReactDOM load failed:', error);
-              reject(error);
-            };
+            script.onload = resolve;
+            script.onerror = reject;
             document.head.appendChild(script);
           });
         }
         
-        console.log('🔵 [DEBUG] React dependencies ready:', {
-          React: typeof window.React,
-          ReactDOM: typeof window.ReactDOM
-        });
-        
-        // Step 3: Test MFE URL accessibility
-        console.log('🔵 [DEBUG] Testing Header MFE URL accessibility...');
+        // Test MFE URL accessibility
         const testUrl = 'http://localhost:8082/header-mfe.js';
-        
-        try {
-          const testResponse = await fetch(testUrl, { method: 'HEAD' });
-          console.log('🔵 [DEBUG] Header MFE URL test:', {
-            url: testUrl,
-            status: testResponse.status,
-            ok: testResponse.ok
-          });
-        } catch (fetchError) {
-          console.error('❌ [DEBUG] Header MFE URL not accessible:', {
-            url: testUrl,
-            error: fetchError.message
-          });
-          throw new Error(`Header MFE server not running or not accessible: ${fetchError.message}`);
+        const testResponse = await fetch(testUrl, { method: 'HEAD' });
+        if (!testResponse.ok) {
+          throw new Error(`Header MFE server not accessible: ${testResponse.status}`);
         }
         
-        // Step 4: Load the MFE script
-        console.log('🔵 [DEBUG] Loading Header MFE script...');
+        // Load the MFE script
         const scriptId = 'header-mfe-script';
-        
-        // Remove existing script
         const existingScript = document.getElementById(scriptId);
         if (existingScript) {
-          console.log('🔵 [DEBUG] Removing existing Header MFE script');
           existingScript.remove();
         }
         
-        // Load new script
-        const loadResult = await new Promise((resolve, reject) => {
+        await new Promise((resolve, reject) => {
           const script = document.createElement('script');
           script.id = scriptId;
-          script.src = testUrl;
-          
-          script.onload = () => {
-            console.log('🔵 [DEBUG] Header MFE script loaded successfully');
-            console.log('🔵 [DEBUG] Post-load window check:', {
-              headerMfe: typeof window.headerMfe,
-              headerMfeKeys: window.headerMfe ? Object.keys(window.headerMfe) : 'N/A'
-            });
-            
-            // Wait for global to be available
-            let attempts = 0;
-            const maxAttempts = 10;
-            
-            const checkGlobal = () => {
-              attempts++;
-              console.log(`🔵 [DEBUG] Global check attempt ${attempts}/${maxAttempts}`);
-              
-              if (window.headerMfe && 
-                  typeof window.headerMfe.bootstrap === 'function' &&
-                  typeof window.headerMfe.mount === 'function' &&
-                  typeof window.headerMfe.unmount === 'function') {
-                
-                console.log('✅ [DEBUG] Header MFE global found with all required methods:', {
-                  bootstrap: typeof window.headerMfe.bootstrap,
-                  mount: typeof window.headerMfe.mount,
-                  unmount: typeof window.headerMfe.unmount
-                });
-                
-                resolve({
-                  bootstrap: window.headerMfe.bootstrap,
-                  mount: window.headerMfe.mount,
-                  unmount: window.headerMfe.unmount
-                });
-              } else if (attempts >= maxAttempts) {
-                console.error('❌ [DEBUG] Header MFE global not found after max attempts:', {
-                  attempts: maxAttempts,
-                  windowHeaderMfe: window.headerMfe,
-                  type: typeof window.headerMfe
-                });
-                reject(new Error('Header MFE global not found after multiple attempts'));
-              } else {
-                setTimeout(checkGlobal, 100);
-              }
-            };
-            
-            checkGlobal();
-          };
-          
-          script.onerror = (error) => {
-            console.error('❌ [DEBUG] Header MFE script load failed:', {
-              error: error,
-              src: script.src
-            });
-            reject(new Error('Failed to load Header MFE script'));
-          };
-          
-          console.log('🔵 [DEBUG] Appending Header MFE script to head');
+          script.src = testUrl + '?t=' + Date.now();
+          script.onload = resolve;
+          script.onerror = reject;
           document.head.appendChild(script);
         });
         
-        console.log('✅ [DEBUG] Header MFE load process completed successfully');
-        return loadResult;
+        // Wait for global to be available
+        let attempts = 0;
+        while (!window.headerMfe && attempts < 10) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+          attempts++;
+        }
+        
+        if (!window.headerMfe) {
+          throw new Error('Header MFE global not found');
+        }
+        
+        console.log('✅ [DEBUG] Header MFE loaded successfully');
+        return window.headerMfe;
         
       } catch (error) {
-        console.error('❌ [DEBUG] Header MFE load process failed:', {
-          error: error.message,
-          stack: error.stack
-        });
+        console.error('❌ Header MFE load failed:', error);
         throw error;
       }
     },
-    activeWhen: () => true, // Header is always active
+    activeWhen: () => true,
     customProps: {
       domElement: 'header-mfe-container'
     }
   });
 
-  // Register the TaskList MFE (only active on /tasks)
+  // Register TaskList MFE
   miniSPA.registerApplication({
     name: 'tasklist-mfe',
     loadApp: async () => {
       console.log('🔵 [DEBUG] Starting TaskList MFE load process...');
-      console.log('🔵 [DEBUG] Current window globals:', {
-        React: typeof window.React,
-        ReactDOM: typeof window.ReactDOM,
-        location: window.location.href
-      });
       
       try {
-        // Step 1: Check container exists
         const container = document.getElementById('tasklist-mfe-container');
-        console.log('🔵 [DEBUG] Container check:', {
-          exists: !!container,
-          id: container?.id,
-          innerHTML: container?.innerHTML?.substring(0, 100)
-        });
-        
         if (!container) {
           throw new Error('tasklist-mfe-container not found in DOM');
         }
         
-        // Step 2: Load React dependencies (reuse from header)
-        console.log('🔵 [DEBUG] React dependencies already loaded:', {
-          React: typeof window.React,
-          ReactDOM: typeof window.ReactDOM
-        });
-        
-        // Step 3: Test MFE URL accessibility
-        console.log('🔵 [DEBUG] Testing TaskList MFE URL accessibility...');
         const testUrl = 'http://localhost:8081/tasklist-mfe.js';
-        
-        try {
-          const testResponse = await fetch(testUrl, { method: 'HEAD' });
-          console.log('🔵 [DEBUG] TaskList MFE URL test:', {
-            url: testUrl,
-            status: testResponse.status,
-            ok: testResponse.ok
-          });
-        } catch (fetchError) {
-          console.error('❌ [DEBUG] TaskList MFE URL not accessible:', {
-            url: testUrl,
-            error: fetchError.message
-          });
-          throw new Error(`TaskList MFE server not running or not accessible: ${fetchError.message}`);
+        const testResponse = await fetch(testUrl, { method: 'HEAD' });
+        if (!testResponse.ok) {
+          throw new Error(`TaskList MFE server not accessible: ${testResponse.status}`);
         }
         
-        // Step 4: Load the MFE script
-        console.log('🔵 [DEBUG] Loading TaskList MFE script...');
         const scriptId = 'tasklist-mfe-script';
-        
-        // Remove existing script
         const existingScript = document.getElementById(scriptId);
         if (existingScript) {
-          console.log('🔵 [DEBUG] Removing existing TaskList MFE script');
           existingScript.remove();
         }
         
-        // Load new script
-        const loadResult = await new Promise((resolve, reject) => {
+        await new Promise((resolve, reject) => {
           const script = document.createElement('script');
           script.id = scriptId;
-          script.src = testUrl;
-          
-          script.onload = () => {
-            console.log('🔵 [DEBUG] TaskList MFE script loaded successfully');
-            console.log('🔵 [DEBUG] Post-load window check:', {
-              tasklistMfe: typeof window.tasklistMfe,
-              tasklistMfeKeys: window.tasklistMfe ? Object.keys(window.tasklistMfe) : 'N/A'
-            });
-            
-            // Wait for global to be available
-            let attempts = 0;
-            const maxAttempts = 10;
-            
-            const checkGlobal = () => {
-              attempts++;
-              console.log(`🔵 [DEBUG] Global check attempt ${attempts}/${maxAttempts}`);
-              
-              if (window.tasklistMfe && 
-                  typeof window.tasklistMfe.bootstrap === 'function' &&
-                  typeof window.tasklistMfe.mount === 'function' &&
-                  typeof window.tasklistMfe.unmount === 'function') {
-                
-                console.log('✅ [DEBUG] TaskList MFE global found with all required methods:', {
-                  bootstrap: typeof window.tasklistMfe.bootstrap,
-                  mount: typeof window.tasklistMfe.mount,
-                  unmount: typeof window.tasklistMfe.unmount
-                });
-                
-                resolve({
-                  bootstrap: window.tasklistMfe.bootstrap,
-                  mount: window.tasklistMfe.mount,
-                  unmount: window.tasklistMfe.unmount
-                });
-              } else if (attempts >= maxAttempts) {
-                console.error('❌ [DEBUG] TaskList MFE global not found after max attempts:', {
-                  attempts: maxAttempts,
-                  windowTasklistMfe: window.tasklistMfe,
-                  type: typeof window.tasklistMfe
-                });
-                reject(new Error('TaskList MFE global not found after multiple attempts'));
-              } else {
-                setTimeout(checkGlobal, 100);
-              }
-            };
-            
-            checkGlobal();
-          };
-          
-          script.onerror = (error) => {
-            console.error('❌ [DEBUG] TaskList MFE script load failed:', {
-              error: error,
-              src: script.src
-            });
-            reject(new Error('Failed to load TaskList MFE script'));
-          };
-          
-          console.log('🔵 [DEBUG] Appending TaskList MFE script to head');
+          script.src = testUrl + '?t=' + Date.now();
+          script.onload = resolve;
+          script.onerror = reject;
           document.head.appendChild(script);
         });
         
-        console.log('✅ [DEBUG] TaskList MFE load process completed successfully');
-        return loadResult;
+        let attempts = 0;
+        while (!window.tasklistMfe && attempts < 10) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+          attempts++;
+        }
+        
+        if (!window.tasklistMfe) {
+          throw new Error('TaskList MFE global not found');
+        }
+        
+        console.log('✅ [DEBUG] TaskList MFE loaded successfully');
+        return window.tasklistMfe;
         
       } catch (error) {
-        console.error('❌ [DEBUG] TaskList MFE load process failed:', {
-          error: error.message,
-          stack: error.stack
-        });
+        console.error('❌ TaskList MFE load failed:', error);
         throw error;
       }
     },
@@ -475,144 +348,57 @@ function initSingleSPA() {
     }
   });
 
-  // Start the system
-
-  // Register the Login MFE (only active on /session/new)
+  // Register Login MFE
   miniSPA.registerApplication({
     name: 'login-mfe',
     loadApp: async () => {
       console.log('🔵 [DEBUG] Starting Login MFE load process...');
-      console.log('🔵 [DEBUG] Current window globals:', {
-        React: typeof window.React,
-        ReactDOM: typeof window.ReactDOM,
-        location: window.location.href
-      });
       
       try {
-        // Step 1: Check container exists
         const container = document.getElementById('login-mfe-container');
-        console.log('🔵 [DEBUG] Container check:', {
-          exists: !!container,
-          id: container?.id,
-          innerHTML: container?.innerHTML?.substring(0, 100)
-        });
-        
         if (!container) {
           throw new Error('login-mfe-container not found in DOM');
         }
         
-        // Step 2: Load React dependencies (reuse from other MFEs)
-        console.log('🔵 [DEBUG] React dependencies already loaded:', {
-          React: typeof window.React,
-          ReactDOM: typeof window.ReactDOM
-        });
-        
-        // Step 3: Test MFE URL accessibility
-        console.log('🔵 [DEBUG] Testing Login MFE URL accessibility...');
         const testUrl = 'http://localhost:8083/login-mfe.js';
-        
-        try {
-          const testResponse = await fetch(testUrl, { method: 'HEAD' });
-          console.log('🔵 [DEBUG] Login MFE URL test:', {
-            url: testUrl,
-            status: testResponse.status,
-            ok: testResponse.ok
-          });
-        } catch (fetchError) {
-          console.error('❌ [DEBUG] Login MFE URL not accessible:', {
-            url: testUrl,
-            error: fetchError.message
-          });
-          throw new Error(`Login MFE server not running or not accessible: ${fetchError.message}`);
+        const testResponse = await fetch(testUrl, { method: 'HEAD' });
+        if (!testResponse.ok) {
+          throw new Error(`Login MFE server not accessible: ${testResponse.status}`);
         }
         
-        // Step 4: Load the MFE script
-        console.log('🔵 [DEBUG] Loading Login MFE script...');
         const scriptId = 'login-mfe-script';
-        
-        // Remove existing script
         const existingScript = document.getElementById(scriptId);
         if (existingScript) {
-          console.log('🔵 [DEBUG] Removing existing Login MFE script');
           existingScript.remove();
         }
         
-        // Load new script
-        const loadResult = await new Promise((resolve, reject) => {
+        await new Promise((resolve, reject) => {
           const script = document.createElement('script');
-          script.id = scriptId;
-          script.src = testUrl;
-          
-          script.onload = () => {
-            console.log('🔵 [DEBUG] Login MFE script loaded successfully');
-            console.log('🔵 [DEBUG] Post-load window check:', {
-              loginMfe: typeof window.loginMfe,
-              loginMfeKeys: window.loginMfe ? Object.keys(window.loginMfe) : 'N/A'
-            });
-            
-            // Wait for global to be available
-            let attempts = 0;
-            const maxAttempts = 10;
-            
-            const checkGlobal = () => {
-              attempts++;
-              console.log(`🔵 [DEBUG] Global check attempt ${attempts}/${maxAttempts}`);
-              
-              if (window.loginMfe && 
-                  typeof window.loginMfe.bootstrap === 'function' &&
-                  typeof window.loginMfe.mount === 'function' &&
-                  typeof window.loginMfe.unmount === 'function') {
-                
-                console.log('✅ [DEBUG] Login MFE global found with all required methods:', {
-                  bootstrap: typeof window.loginMfe.bootstrap,
-                  mount: typeof window.loginMfe.mount,
-                  unmount: typeof window.loginMfe.unmount
-                });
-                
-                resolve({
-                  bootstrap: window.loginMfe.bootstrap,
-                  mount: window.loginMfe.mount,
-                  unmount: window.loginMfe.unmount
-                });
-              } else if (attempts >= maxAttempts) {
-                console.error('❌ [DEBUG] Login MFE global not found after max attempts:', {
-                  attempts: maxAttempts,
-                  windowLoginMfe: window.loginMfe,
-                  type: typeof window.loginMfe
-                });
-                reject(new Error('Login MFE global not found after multiple attempts'));
-              } else {
-                setTimeout(checkGlobal, 100);
-              }
-            };
-            
-            checkGlobal();
-          };
-          
-          script.onerror = (error) => {
-            console.error('❌ [DEBUG] Login MFE script load failed:', {
-              error: error,
-              src: script.src
-            });
-            reject(new Error('Failed to load Login MFE script'));
-          };
-          
-          console.log('🔵 [DEBUG] Appending Login MFE script to head');
+          script.src = testUrl + '?t=' + Date.now();
+          script.onload = resolve;
+          script.onerror = reject;
           document.head.appendChild(script);
         });
         
-        console.log('✅ [DEBUG] Login MFE load process completed successfully');
-        return loadResult;
+        let attempts = 0;
+        while (!window.loginMfe && attempts < 10) {
+          await new Promise(resolve => setTimeout(resolve, 100));
+          attempts++;
+        }
+        
+        if (!window.loginMfe) {
+          throw new Error('Login MFE global not found');
+        }
+        
+        console.log('✅ [DEBUG] Login MFE loaded successfully');
+        return window.loginMfe;
         
       } catch (error) {
-        console.error('❌ [DEBUG] Login MFE load process failed:', {
-          error: error.message,
-          stack: error.stack
-        });
+        console.error('❌ Login MFE load failed:', error);
         throw error;
       }
     },
-    activeWhen: ['/session/new'], // Only active on login page
+    activeWhen: ['/session/new'],
     customProps: {
       domElement: 'login-mfe-container'
     }
@@ -630,12 +416,13 @@ function initSingleSPA() {
   console.log('✅ [DEBUG] Single-SPA system fully initialized!');
 }
 
+// Initialize on DOM ready
 document.addEventListener('DOMContentLoaded', function() {
   console.log('🟢 [DEBUG] DOM loaded, initializing Single-SPA...');
   initSingleSPA();
 });
 
-// Handle Turbo navigation
+// Handle Turbo navigation properly
 document.addEventListener('turbo:load', function() {
   console.log('🟡 [DEBUG] Turbo navigation detected');
   console.log('🟡 [DEBUG] Current path:', window.location.pathname);
@@ -644,22 +431,22 @@ document.addEventListener('turbo:load', function() {
   if (window.miniSPA && window.miniSPA.started) {
     console.log('🔵 [DEBUG] Re-evaluating apps for route:', window.location.pathname);
     
-    // Process each app for the new route
-    const processApps = async () => {
-      for (const app of window.miniSPA.apps) {
-        const shouldBeActive = window.miniSPA.shouldAppBeActive(app);
-        console.log(`🔵 [DEBUG] App ${app.name}: shouldBeActive=${shouldBeActive}, currentStatus=${app.status}`);
-        
-        if (shouldBeActive && (app.status === 'LOADED' || app.status === 'NOT_LOADED')) {
-          console.log(`🔵 [DEBUG] Loading/mounting ${app.name} because it should be active`);
-          await window.miniSPA.loadAndMountApp(app);
-        }
-      }
-    };
-    
-    processApps();
+    // Use setTimeout to ensure DOM is fully ready
+    setTimeout(() => {
+      window.miniSPA.evaluateApps();
+    }, 50);
   } else {
     console.log('🔵 [DEBUG] Mini Single-SPA not ready, initializing...');
     initSingleSPA();
+  }
+});
+
+// Handle browser back/forward buttons
+window.addEventListener('popstate', function() {
+  console.log('🔵 [DEBUG] Popstate detected, re-evaluating apps');
+  if (window.miniSPA && window.miniSPA.started) {
+    setTimeout(() => {
+      window.miniSPA.evaluateApps();
+    }, 50);
   }
 });

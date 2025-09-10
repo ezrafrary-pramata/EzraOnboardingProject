@@ -66,7 +66,7 @@ class Header extends React.Component {
         backgroundColor: badge.color,
         color: 'white',
         padding: '2px 6px',
-        borderRadius: '8px',
+        
         fontSize: '10px',
         fontWeight: '500',
         marginLeft: '8px'
@@ -79,9 +79,9 @@ class Header extends React.Component {
     
     return React.createElement('div', {
       style: {
-        border: '2px dashed #ff9800',
-        borderRadius: '8px',
-        margin: '5px'
+        
+        
+        margin: '0'
       }
     }, [
       // MFE identification header
@@ -144,7 +144,7 @@ class Header extends React.Component {
                 width: '32px',
                 height: '32px',
                 backgroundColor: '#3b82f6',
-                borderRadius: '8px',
+                
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',

@@ -3,8 +3,6 @@
 <% end %>
 
 <div style="max-width: 1200px; margin: 0 auto; padding: 20px;">
-  <h1 style="text-align: center; color: #333; margin-bottom: 30px;">TaskTracker with Single-SPA</h1>
-  
   <% if authenticated? %>
     <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
       <h2>Welcome, <%= Current.user.email_address %></h2>
@@ -36,32 +34,9 @@
   };
   console.log('🔵 Tasks data loaded for external MFE:', window.tasklistMfeData);
 </script>
-
-    <!-- Original React TaskList (for comparison) -->
-    <div style="margin-top: 30px; padding: 20px; background: #fff; border: 1px solid #ddd; border-radius: 8px;">
-      <h3>Original Rails Embedded TaskList (for comparison)</h3>
-      <div id="react-task-list"></div>
-      
-      <script type="module">
-        import React from "react"
-        import { createRoot } from "react-dom/client"
-        import TaskList from "components/TaskList"
-
-        const tasks = <%= raw @tasks.to_json %>
-        const users = <%= raw @users.to_json %>  
-        const container = document.getElementById('react-task-list')
-        
-        if (container) {
-          const root = createRoot(container)
-          root.render(React.createElement(TaskList, { 
-            tasks: tasks, 
-            users: users    
-          }))
-        }
-      </script>
-    </div>
   <% end %>
 </div>
+
 <!-- MFE Debug Information -->
 <div style="background: #f0f8ff; border: 2px solid #4a90e2; border-radius: 8px; padding: 15px; margin: 20px 0; font-family: monospace; font-size: 12px;">
   <h3 style="margin: 0 0 10px 0; color: #2c5aa0;">🔍 MFE Debug Information</h3>

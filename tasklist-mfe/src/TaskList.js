@@ -38,6 +38,12 @@ class TaskList extends React.Component {
     }
   }
   
+  // Handle task click - navigate to task detail page
+  handleTaskClick = (taskId) => {
+    console.log('🔵 TaskList MFE: Navigating to task:', taskId);
+    window.location.href = `/tasks/${taskId}`;
+  };
+  
   fetchTasksOrUseDemoData = async () => {
     this.setState({ isLoading: true, error: null });
     
@@ -289,7 +295,7 @@ class TaskList extends React.Component {
             justifyContent: 'center'
           }
         }, [
-          'Independent MFE • React Component',
+          'Independent MFE • React Component • Click tasks to view details',
           this.getDataSourceBadge()
         ])
       ]),
@@ -574,6 +580,7 @@ class TaskList extends React.Component {
             
             return React.createElement('div', { 
               key: task.id, 
+              onClick: () => this.handleTaskClick(task.id),
               style: {
                 backgroundColor: '#ffffff',
                 border: '1px solid #e9ecef',
@@ -589,13 +596,31 @@ class TaskList extends React.Component {
                 e.currentTarget.style.transform = 'translateY(-2px)';
                 e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.12)';
                 e.currentTarget.style.borderColor = '#2196f3';
+                e.currentTarget.style.backgroundColor = '#f8f9fa';
               },
               onMouseLeave: (e) => {
                 e.currentTarget.style.transform = 'translateY(0)';
                 e.currentTarget.style.boxShadow = '0 2px 8px rgba(0,0,0,0.05)';
                 e.currentTarget.style.borderColor = '#e9ecef';
+                e.currentTarget.style.backgroundColor = '#ffffff';
               }
             }, [
+              // Click indicator
+              React.createElement('div', {
+                key: 'click-indicator',
+                style: {
+                  position: 'absolute',
+                  top: '12px',
+                  right: '12px',
+                  fontSize: '12px',
+                  color: '#6c757d',
+                  backgroundColor: '#f8f9fa',
+                  padding: '4px 8px',
+                  borderRadius: '12px',
+                  fontWeight: '500'
+                }
+              }, '👆 Click to view'),
+              
               // Task header
               React.createElement('div', {
                 key: 'task-header',
@@ -603,7 +628,8 @@ class TaskList extends React.Component {
                   display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'flex-start',
-                  marginBottom: '16px'
+                  marginBottom: '16px',
+                  marginRight: '80px' // Space for click indicator
                 }
               }, [
                 React.createElement('div', {

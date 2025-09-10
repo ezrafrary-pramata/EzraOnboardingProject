@@ -1,3 +1,90 @@
-<h1>New Task</h1>
-<%= render "form", task: @task %>
-<%= link_to "Cancel", tasks_path %>
+<div style="min-height: 100vh; background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); padding: 2rem 1rem; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+  <div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 16px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); padding: 2rem;">
+    
+    <!-- Header -->
+    <div style="text-align: center; margin-bottom: 2rem;">
+      <div style="width: 48px; height: 48px; background-color: #0ea5e9; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem; color: white;">
+        <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+        </svg>
+      </div>
+      <h2 style="font-size: 1.875rem; font-weight: bold; color: #111827; margin: 0 0 0.5rem 0;">Create New Task</h2>
+      <p style="color: #6b7280; font-size: 1rem; margin: 0;">Fill in the details for your new task</p>
+    </div>
+
+    <!-- Error Messages -->
+    <% if @task.errors.any? %>
+      <div style="padding: 1.5rem; border-radius: 12px; background-color: #fef2f2; border: 1px solid #fecaca; margin-bottom: 2rem;">
+        <h3 style="font-size: 1.125rem; font-weight: 600; color: #dc2626; margin: 0 0 1rem 0; display: flex; align-items: center;">
+          <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="margin-right: 0.5rem; color: #dc2626;">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+          </svg>
+          <%= pluralize(@task.errors.count, "error") %> prohibited this task from being saved:
+        </h3>
+        <ul style="margin: 0; padding-left: 1.5rem; color: #991b1b;">
+          <% @task.errors.full_messages.each do |message| %>
+            <li style="margin-bottom: 0.5rem; font-size: 0.875rem;"><%= message %></li>
+          <% end %>
+        </ul>
+      </div>
+    <% end %>
+
+    <!-- Form -->
+    <%= form_with model: @task, local: true, html: { style: "margin: 0;" } do |form| %>
+      
+      <!-- Name Field -->
+      <div style="margin-bottom: 1.5rem;">
+        <%= form.label :name, "Task Name", style: "display: block; font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 0.5rem;" %>
+        <%= form.text_field :name, required: true, placeholder: "Enter task name", 
+            style: "width: 100%; padding: 12px 16px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 1rem; color: #111827; background-color: white; transition: all 0.2s; outline: none; box-sizing: border-box;",
+            onfocus: "this.style.borderColor='#0ea5e9'",
+            onblur: "this.style.borderColor='#d1d5db'" %>
+      </div>
+
+      <!-- Description Field -->
+      <div style="margin-bottom: 1.5rem;">
+        <%= form.label :description, "Description", style: "display: block; font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 0.5rem;" %>
+        <%= form.text_area :description, placeholder: "Enter task description", rows: 4,
+            style: "width: 100%; padding: 12px 16px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 1rem; color: #111827; background-color: white; transition: all 0.2s; outline: none; box-sizing: border-box; resize: vertical; min-height: 100px;",
+            onfocus: "this.style.borderColor='#0ea5e9'",
+            onblur: "this.style.borderColor='#d1d5db'" %>
+      </div>
+
+      <!-- Assigned To Field -->
+      <% if @organization_users && @organization_users.any? %>
+        <div style="margin-bottom: 1.5rem;">
+          <%= form.label :assigned_to, "Assign To", style: "display: block; font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 0.5rem;" %>
+          <%= form.select :assigned_to, 
+              options_from_collection_for_select(@organization_users, :id, :email_address, @task.assigned_to), 
+              { prompt: "Select a user (optional)" },
+              { style: "width: 100%; padding: 12px 16px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 1rem; color: #111827; background-color: white; transition: all 0.2s; outline: none; box-sizing: border-box; cursor: pointer;",
+                onfocus: "this.style.borderColor='#0ea5e9'",
+                onblur: "this.style.borderColor='#d1d5db'" } %>
+        </div>
+      <% end %>
+
+      <!-- Due Date Field -->
+      <div style="margin-bottom: 1.5rem;">
+        <%= form.label :due_date, "Due Date & Time (optional)", style: "display: block; font-size: 0.875rem; font-weight: 500; color: #374151; margin-bottom: 0.5rem;" %>
+        <%= form.datetime_local_field :due_date,
+            style: "width: 100%; padding: 12px 16px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 1rem; color: #111827; background-color: white; transition: all 0.2s; outline: none; box-sizing: border-box;",
+            onfocus: "this.style.borderColor='#0ea5e9'",
+            onblur: "this.style.borderColor='#d1d5db'" %>
+      </div>
+
+      <!-- Buttons -->
+      <div style="display: flex; gap: 12px; margin-top: 2rem;">
+        <%= form.submit "Create Task", 
+            style: "flex: 1; padding: 12px 16px; background-color: #0ea5e9; color: white; border: none; border-radius: 8px; font-size: 1rem; font-weight: 500; cursor: pointer; transition: all 0.2s;",
+            onmouseover: "this.style.backgroundColor='#0284c7'",
+            onmouseout: "this.style.backgroundColor='#0ea5e9'" %>
+        
+        <%= link_to "Cancel", tasks_path, 
+            style: "padding: 12px 16px; background-color: #6b7280; color: white; text-decoration: none; border-radius: 8px; font-size: 1rem; font-weight: 500; text-align: center; transition: all 0.2s; display: flex; align-items: center; justify-content: center;",
+            onmouseover: "this.style.backgroundColor='#4b5563'",
+            onmouseout: "this.style.backgroundColor='#6b7280'" %>
+      </div>
+    <% end %>
+    
+  </div>
+</div>

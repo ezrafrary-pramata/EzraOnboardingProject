@@ -9,7 +9,7 @@ module.exports = (env, argv) => {
     mode: argv.mode || 'development',
     devtool: 'source-map',
     devServer: {
-      port: 8082,
+      port: 8082, 
       hot: true,
       headers: {
         'Access-Control-Allow-Origin': '*',

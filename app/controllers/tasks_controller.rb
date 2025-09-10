@@ -55,11 +55,13 @@ class TasksController < ApplicationController
   end
 
   def edit
+    # @task is already loaded by set_task
+    # @organization_users is loaded by load_organization_users
   end
 
   def update
     if @task.update(task_params)
-      redirect_to @task
+      redirect_to @task, notice: 'Task was successfully updated.'
     else
       render :edit, status: :unprocessable_entity
     end

@@ -15,6 +15,32 @@ const lifecycles = singleSpaReact({
   ReactDOM: ReactDOMToUse,
   createRoot,
   rootComponent: LoginForm,
+  // FIXED: Proper domElementGetter
+  domElementGetter: (props) => {
+    console.log('🔵 [MFE-DEBUG] Login domElementGetter called with props:', props);
+    
+    if (props.domElement instanceof HTMLElement) {
+      return props.domElement;
+    }
+    
+    if (typeof props.domElement === 'string') {
+      const selector = props.domElement.startsWith('#') ? props.domElement : `#${props.domElement}`;
+      const element = document.querySelector(selector);
+      
+      if (!element) {
+        throw new Error(`Element not found: ${selector}`);
+      }
+      
+      return element;
+    }
+    
+    const fallbackElement = document.getElementById('login-mfe-container');
+    if (fallbackElement) {
+      return fallbackElement;
+    }
+    
+    throw new Error('No suitable DOM element found for Login MFE');
+  },
   errorBoundary: (err, info, props) => {
     console.error('🔴 [MFE-DEBUG] Login MFE Error Boundary:', err);
     return React.createElement('div', {

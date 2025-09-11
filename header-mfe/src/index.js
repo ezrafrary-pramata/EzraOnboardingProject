@@ -20,6 +20,41 @@ const lifecycles = singleSpaReact({
   ReactDOM: ReactDOMToUse,
   createRoot,
   rootComponent: Header,
+  // FIXED: Enhanced domElementGetter that always returns fresh elements
+  domElementGetter: (props) => {
+    console.log('🔵 [MFE-DEBUG] Header domElementGetter called with props:', props);
+    
+    // If domElement is provided and is an HTMLElement, verify it's still in DOM
+    if (props.domElement instanceof HTMLElement) {
+      if (document.contains(props.domElement)) {
+        console.log('🔵 [MFE-DEBUG] Props.domElement is valid HTMLElement in DOM');
+        return props.domElement;
+      } else {
+        console.warn('🔴 [MFE-DEBUG] Props.domElement is stale, finding fresh element');
+      }
+    }
+    
+    // Always try to find fresh element by ID
+    const elementId = props.domElement instanceof HTMLElement ? 
+      props.domElement.id : 
+      (typeof props.domElement === 'string' ? props.domElement : 'header-mfe-container');
+    
+    const selector = elementId.startsWith('#') ? elementId : `#${elementId}`;
+    const element = document.querySelector(selector);
+    
+    console.log('🔵 [MFE-DEBUG] Fresh element search:', {
+      selector,
+      found: !!element,
+      elementId: element?.id
+    });
+    
+    if (!element) {
+      console.error('🔴 [MFE-DEBUG] Element not found:', selector);
+      throw new Error(`Element not found: ${selector}`);
+    }
+    
+    return element;
+  },
   errorBoundary: (err, info, props) => {
     console.error('🔴 [MFE-DEBUG] Header MFE Error Boundary:', err);
     return React.createElement('div', {
@@ -33,7 +68,20 @@ const lifecycles = singleSpaReact({
       }
     }, [
       React.createElement('h3', { key: 'title' }, '❌ Header MFE Error'),
-      React.createElement('p', { key: 'message' }, err.message)
+      React.createElement('p', { key: 'message' }, err.message),
+      React.createElement('button', {
+        key: 'refresh',
+        onClick: () => window.location.reload(),
+        style: {
+          marginTop: '10px',
+          padding: '8px 16px',
+          backgroundColor: '#d32f2f',
+          color: 'white',
+          border: 'none',
+          borderRadius: '4px',
+          cursor: 'pointer'
+        }
+      }, 'Refresh Page')
     ]);
   }
 });

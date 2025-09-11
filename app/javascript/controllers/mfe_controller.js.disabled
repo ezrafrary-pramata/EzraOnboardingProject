@@ -1,0 +1,34 @@
+import { Controller } from "@hotwired/stimulus"
+
+// Connects to data-controller="mfe"
+export default class extends Controller {
+  static values = { 
+    name: String,
+    container: String 
+  }
+
+  connect() {
+    console.log(`🔵 MFE Controller connected: ${this.nameValue}`)
+    
+    // Ensure the MFE is properly mounted when stimulus connects
+    this.ensureMounted()
+  }
+
+  disconnect() {
+    console.log(`🔵 MFE Controller disconnected: ${this.nameValue}`)
+  }
+
+  ensureMounted() {
+    if (window.miniSPA && window.miniSPA.started) {
+      setTimeout(() => {
+        console.log(`🔵 Ensuring ${this.nameValue} is mounted`)
+        window.miniSPA.evaluateApps()
+      }, 50)
+    }
+  }
+
+  refresh() {
+    console.log(`🔵 Refreshing MFE: ${this.nameValue}`)
+    this.ensureMounted()
+  }
+}

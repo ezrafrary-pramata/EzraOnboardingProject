@@ -19,7 +19,7 @@
     </div>
 
     <!-- TaskList Microfrontend Container -->
-    <div id="tasklist-mfe-container">
+    <div id="tasklist-mfe-container" >
       <div style="text-align: center; color: #666; padding: 40px;">
         Loading TaskList Microfrontend...
       </div>
@@ -28,12 +28,6 @@
     <!-- Make tasks and users data available globally for the microfrontend -->
     <script>
   // Make data available globally for the external MFE
-  window.tasklistMfeData = {
-    tasks: <%= raw @tasks.to_json %>,
-    users: <%= raw @users.to_json %>
-  };
-  console.log('🔵 Tasks data loaded for external MFE:', window.tasklistMfeData);
-</script>
   <% end %>
 </div>
 
@@ -121,4 +115,33 @@ window.addEventListener('unhandledrejection', function(e) {
     promise: e.promise
   });
 });
+</script>
+
+<script>
+  // Make data available globally for the external MFE
+  window.tasklistMfeData = {
+    tasks: <%= raw @tasks.to_json %>,
+    users: <%= raw @users.to_json %>
+  };
+  console.log('🔵 Tasks data loaded for external MFE:', window.tasklistMfeData);
+  
+  // Force re-evaluation of MFEs after data is loaded
+  document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(function() {
+      if (window.miniSPA && window.miniSPA.started) {
+        console.log('🔵 Forcing MFE re-evaluation for tasks page');
+        window.miniSPA.evaluateApps();
+      }
+    }, 100);
+  });
+  
+  // Also handle turbo:load events
+  document.addEventListener('turbo:load', function() {
+    setTimeout(function() {
+      if (window.miniSPA && window.miniSPA.started) {
+        console.log('🔵 Turbo load: Forcing MFE re-evaluation for tasks page');
+        window.miniSPA.evaluateApps();
+      }
+    }, 150);
+  });
 </script>

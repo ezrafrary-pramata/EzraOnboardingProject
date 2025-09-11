@@ -1,3 +1,5 @@
+<meta name="turbo-cache-control" content="no-cache">
+<meta name="turbo-visit-control" content="reload">
 <style>
   /* Hide header on login page */
   #header-mfe-container {
@@ -11,7 +13,7 @@
 </style>
 
 <!-- Login Microfrontend Container -->
-<div id="login-mfe-container">
+<div id="login-mfe-container" >
   <div style="text-align: center; color: #666; padding: 40px;">
     Loading Login Microfrontend...
   </div>
@@ -35,4 +37,14 @@
     emailValue: '<%= params[:email_address] %>'
   };
   console.log('🔵 Login data loaded for microfrontend:', window.loginData);
+  
+  // Force re-evaluation of MFEs after login data is loaded
+  document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(function() {
+      if (window.miniSPA && window.miniSPA.started) {
+        console.log('🔵 Forcing MFE re-evaluation for login page');
+        window.miniSPA.evaluateApps();
+      }
+    }, 100);
+  });
 </script>

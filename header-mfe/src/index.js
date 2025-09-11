@@ -20,11 +20,13 @@ const lifecycles = singleSpaReact({
   ReactDOM: ReactDOMToUse,
   createRoot,
   rootComponent: Header,
-  // FIXED: Enhanced domElementGetter that always returns fresh elements
+  // FIXED: Enhanced domElementGetter that properly handles all cases
   domElementGetter: (props) => {
     console.log('🔵 [MFE-DEBUG] Header domElementGetter called with props:', props);
     
-    // If domElement is provided and is an HTMLElement, verify it's still in DOM
+    let element = null;
+    
+    // Case 1: props.domElement is already an HTMLElement
     if (props.domElement instanceof HTMLElement) {
       if (document.contains(props.domElement)) {
         console.log('🔵 [MFE-DEBUG] Props.domElement is valid HTMLElement in DOM');
@@ -34,24 +36,41 @@ const lifecycles = singleSpaReact({
       }
     }
     
-    // Always try to find fresh element by ID
-    const elementId = props.domElement instanceof HTMLElement ? 
-      props.domElement.id : 
-      (typeof props.domElement === 'string' ? props.domElement : 'header-mfe-container');
-    
-    const selector = elementId.startsWith('#') ? elementId : `#${elementId}`;
-    const element = document.querySelector(selector);
-    
-    console.log('🔵 [MFE-DEBUG] Fresh element search:', {
-      selector,
-      found: !!element,
-      elementId: element?.id
-    });
-    
-    if (!element) {
-      console.error('🔴 [MFE-DEBUG] Element not found:', selector);
-      throw new Error(`Element not found: ${selector}`);
+    // Case 2: props.domElement is a string selector
+    let selector = '';
+    if (typeof props.domElement === 'string') {
+      selector = props.domElement.startsWith('#') ? props.domElement : `#${props.domElement}`;
+    } else if (props.domElement instanceof HTMLElement && props.domElement.id) {
+      selector = `#${props.domElement.id}`;
+    } else {
+      // Fallback to default container name
+      selector = '#header-mfe-container';
     }
+    
+    // Try to find existing element
+    element = document.querySelector(selector);
+    
+    // If not found, create it
+    if (!element) {
+      const id = selector.replace('#', '');
+      console.log(`🔵 [MFE-DEBUG] Creating missing element: ${id}`);
+      
+      element = document.createElement('div');
+      element.id = id;
+      element.style.minHeight = '20px';
+      
+      // Insert at the beginning of body for header elements
+      document.body.insertBefore(element, document.body.firstChild);
+      
+      console.log('🔵 [MFE-DEBUG] Created element:', element);
+    }
+    
+    console.log('🔵 [MFE-DEBUG] Returning element:', {
+      element,
+      id: element.id,
+      isInDOM: document.contains(element),
+      selector
+    });
     
     return element;
   },

@@ -4,13 +4,14 @@ import "controllers"
 
 console.log('🟢 Application.js loaded');
 
-// Custom MFE Management with enhanced Turbo support
+// Custom MFE Management with Turbo-safe approach
 class MiniSingleSPA {
   constructor() {
     this.apps = [];
     this.started = false;
     this.currentPath = '';
-    this.isNavigating = false; // Track navigation state
+    this.isNavigating = false;
+    this.mountedApps = new Map();
     console.log('🔵 Mini Single-SPA initialized');
   }
 
@@ -24,7 +25,7 @@ class MiniSingleSPA {
       status: 'NOT_LOADED',
       appInstance: null,
       mountedAt: null,
-      lastContainer: null // Track last known container
+      containerElement: null
     });
 
     if (this.started && !this.isNavigating) {
@@ -32,44 +33,49 @@ class MiniSingleSPA {
     }
   }
 
-  // FIXED: Always get fresh DOM element reference
+  // Get or create DOM element - safer approach without permanent elements
   getDOMElement(elementSelector) {
     if (!elementSelector) {
       console.error('🔴 No element selector provided');
       return null;
     }
 
-    // NEVER use cached elements - always query fresh from DOM
     let element = null;
+    let selector = '';
 
     if (typeof elementSelector === 'string') {
-      const selector = elementSelector.startsWith('#') ? elementSelector : `#${elementSelector}`;
-      element = document.querySelector(selector);
-      
-      if (!element) {
-        console.warn(`🔴 Element not found with selector: ${selector}`);
-        return null;
-      }
+      selector = elementSelector.startsWith('#') ? elementSelector : `#${elementSelector}`;
     } else if (elementSelector instanceof HTMLElement) {
-      // Even if it's an HTMLElement, verify it's still in the DOM
       if (document.contains(elementSelector)) {
-        element = elementSelector;
+        return elementSelector;
       } else {
-        console.warn('🔴 Provided HTMLElement is no longer in DOM, searching fresh...');
-        // Try to find it again
-        const id = elementSelector.id;
-        if (id) {
-          element = document.getElementById(id);
-        }
+        selector = elementSelector.id ? `#${elementSelector.id}` : '#unknown-element';
       }
     }
 
+    // Try to find existing element
+    element = document.querySelector(selector);
+    
+    // If not found, create it (but don't make it permanent)
     if (!element) {
-      console.error('🔴 Invalid element selector type or element not found:', typeof elementSelector);
-      return null;
+      const id = selector.replace('#', '');
+      console.log(`🔵 Creating element: ${id}`);
+      
+      element = document.createElement('div');
+      element.id = id;
+      element.style.minHeight = '20px';
+      
+      // Insert in appropriate location
+      if (id.includes('header')) {
+        document.body.insertBefore(element, document.body.firstChild);
+      } else {
+        const main = document.querySelector('main') || document.body;
+        main.appendChild(element);
+      }
+      
+      console.log('🔵 Created element:', element);
     }
 
-    console.log('🔵 Fresh DOM element found:', element);
     return element;
   }
 
@@ -80,37 +86,14 @@ class MiniSingleSPA {
     }
 
     const currentPath = window.location.pathname;
-    console.log('🔵 [DEBUG] Evaluating apps for path:', currentPath);
+    console.log('🔵 Evaluating apps for path:', currentPath);
     
     this.currentPath = currentPath;
     
     for (const app of this.apps) {
       const shouldBeActive = this.shouldAppBeActive(app);
       
-      // ALWAYS get fresh container reference
-      const container = this.getDOMElement(app.customProps.domElement);
-      
-      console.log(`🔵 [DEBUG] App ${app.name}: shouldBeActive=${shouldBeActive}, hasContainer=${!!container}, status=${app.status}`);
-      
-      if (!container) {
-        console.warn(`⚠️ Container element not found for ${app.name}: ${app.customProps.domElement}`);
-        // If app was mounted but container is gone, mark as unmounted
-        if (app.status === 'MOUNTED') {
-          app.status = 'NOT_MOUNTED';
-          app.lastContainer = null;
-        }
-        continue;
-      }
-
-      // Check if container changed (Turbo navigation)
-      if (app.lastContainer && app.lastContainer !== container) {
-        console.log(`🔄 Container changed for ${app.name}, unmounting first`);
-        if (app.status === 'MOUNTED') {
-          await this.unmountApp(app);
-        }
-      }
-
-      app.lastContainer = container;
+      console.log(`🔵 App ${app.name}: shouldBeActive=${shouldBeActive}, status=${app.status}`);
       
       if (shouldBeActive && app.status !== 'MOUNTED') {
         await this.loadAndMountApp(app);
@@ -122,71 +105,70 @@ class MiniSingleSPA {
 
   async loadAndMountApp(app) {
     try {
-      console.log('🔵 [DEBUG] Loading and mounting app:', app.name);
+      console.log('🔵 Loading and mounting app:', app.name);
       
-      // ALWAYS get fresh container
+      // Always get fresh container
       const container = this.getDOMElement(app.customProps.domElement);
       if (!container) {
-        console.warn(`⚠️ Container element not found for ${app.name}, skipping`);
+        console.warn(`⚠️ Could not create container for ${app.name}`);
         return;
       }
       
-      // Clear any existing content
+      // Store container reference
+      app.containerElement = container;
+      
+      // Clear container
       container.innerHTML = '<div style="text-align: center; color: #666; padding: 20px;">Loading Microfrontend...</div>';
       
       app.status = 'LOADING';
 
-      // Load the module if we haven't loaded it yet
+      // Load the module if not already loaded
       if (!app.appInstance) {
-        console.log('🔵 [DEBUG] Calling loadApp function for:', app.name);
+        console.log('🔵 Loading app module for:', app.name);
         const appModule = await app.loadApp();
-        console.log('🔵 [DEBUG] App module loaded:', app.name, appModule);
+        console.log('🔵 App module loaded:', app.name);
         app.appInstance = appModule;
       }
       
       app.status = 'LOADED';
 
-      // CRITICAL: Create props with fresh DOM element and getter
+      // Create props with fresh container
       const mfeProps = {
         name: app.name,
         appName: app.name,
-        // Pass the actual HTMLElement
         domElement: container,
-        // FIXED: domElementGetter that ALWAYS returns fresh element
         domElementGetter: () => {
-          const freshContainer = this.getDOMElement(app.customProps.domElement);
-          console.log('🔵 [DEBUG] domElementGetter called, returning fresh container:', freshContainer);
-          return freshContainer;
+          // Always return the stored container or find fresh one
+          if (app.containerElement && document.contains(app.containerElement)) {
+            return app.containerElement;
+          }
+          const fresh = this.getDOMElement(app.customProps.domElement);
+          app.containerElement = fresh;
+          return fresh;
         },
         ...app.customProps
       };
 
-      console.log('🔵 [DEBUG] MFE props:', {
-        name: mfeProps.name,
-        domElement: mfeProps.domElement,
-        domElementType: typeof mfeProps.domElement,
-        isHTMLElement: mfeProps.domElement instanceof HTMLElement,
-        elementId: mfeProps.domElement?.id
-      });
+      console.log('🔵 MFE props created for:', app.name);
 
       // Bootstrap if needed
       if (app.appInstance.bootstrap) {
-        console.log('🔵 [DEBUG] Bootstrapping app:', app.name);
+        console.log('🔵 Bootstrapping app:', app.name);
         await app.appInstance.bootstrap(mfeProps);
       }
 
       // Mount the app
       if (app.appInstance.mount) {
-        console.log('🔵 [DEBUG] Mounting app:', app.name);
+        console.log('🔵 Mounting app:', app.name);
         await app.appInstance.mount(mfeProps);
         app.status = 'MOUNTED';
         app.mountedAt = this.currentPath;
-        app.lastContainer = container;
-        console.log('✅ [DEBUG] App mounted successfully:', app.name);
+        this.mountedApps.set(app.name, app);
+        console.log('✅ App mounted successfully:', app.name);
       }
       
     } catch (error) {
-      console.error('❌ [DEBUG] Error loading/mounting app:', app.name, error);
+      console.error('❌ Error loading/mounting app:', app.name, error);
       app.status = 'LOAD_ERROR';
       
       // Show error in UI
@@ -198,10 +180,6 @@ class MiniSingleSPA {
             <p style="color: #c62828; margin: 0; font-family: monospace; font-size: 12px;">
               ${error.message}
             </p>
-            <details style="margin-top: 10px;">
-              <summary style="cursor: pointer; color: #d32f2f;">Show Stack Trace</summary>
-              <pre style="font-size: 10px; overflow: auto; max-height: 200px; background: #fff; padding: 10px; margin-top: 5px;">${error.stack}</pre>
-            </details>
             <button onclick="window.location.reload()" style="margin-top: 10px; padding: 5px 10px; background: #d32f2f; color: white; border: none; border-radius: 4px; cursor: pointer;">
               Refresh Page
             </button>
@@ -213,41 +191,35 @@ class MiniSingleSPA {
 
   async unmountApp(app) {
     try {
-      console.log('🔵 [DEBUG] Unmounting app:', app.name);
+      console.log('🔵 Unmounting app:', app.name);
       
-      if (app.appInstance && app.appInstance.unmount) {
-        // Get the container that was used for mounting
-        const container = app.lastContainer || this.getDOMElement(app.customProps.domElement);
-        
-        if (container) {
-          const mfeProps = {
-            name: app.name,
-            appName: app.name,
-            domElement: container,
-            domElementGetter: () => container,
-            ...app.customProps
-          };
-          await app.appInstance.unmount(mfeProps);
-        }
+      if (app.appInstance && app.appInstance.unmount && app.containerElement) {
+        const mfeProps = {
+          name: app.name,
+          appName: app.name,
+          domElement: app.containerElement,
+          domElementGetter: () => app.containerElement,
+          ...app.customProps
+        };
+        await app.appInstance.unmount(mfeProps);
       }
       
       app.status = 'LOADED';
       app.mountedAt = null;
-      app.lastContainer = null;
+      this.mountedApps.delete(app.name);
       
-      // Clear container if it still exists
-      const container = this.getDOMElement(app.customProps.domElement);
-      if (container) {
-        container.innerHTML = '<div style="text-align: center; color: #666; padding: 10px;">Microfrontend Unloaded</div>';
+      // Clear container
+      if (app.containerElement && document.contains(app.containerElement)) {
+        app.containerElement.innerHTML = '<div style="text-align: center; color: #666; padding: 10px;">Microfrontend Unloaded</div>';
       }
       
-      console.log('✅ [DEBUG] App unmounted successfully:', app.name);
+      console.log('✅ App unmounted successfully:', app.name);
     } catch (error) {
-      console.error('❌ [DEBUG] Error unmounting app:', app.name, error);
+      console.error('❌ Error unmounting app:', app.name, error);
       // Reset state anyway
       app.status = 'LOADED';
       app.mountedAt = null;
-      app.lastContainer = null;
+      this.mountedApps.delete(app.name);
     }
   }
 
@@ -272,30 +244,39 @@ class MiniSingleSPA {
   }
 
   start() {
-    console.log('🔵 [DEBUG] Starting Mini Single-SPA');
+    console.log('🔵 Starting Mini Single-SPA');
     this.started = true;
-    // Use setTimeout to ensure DOM is ready
     setTimeout(() => {
       this.evaluateApps();
     }, 100);
-    console.log('✅ [DEBUG] Mini Single-SPA started successfully!');
+    console.log('✅ Mini Single-SPA started successfully!');
   }
 
-  // FIXED: Method to handle navigation start
+  // Handle navigation start - unmount all apps to prevent Turbo conflicts
   handleNavigationStart() {
-    console.log('🔄 Navigation starting, setting navigation flag');
+    console.log('🔄 Navigation starting - unmounting all apps');
     this.isNavigating = true;
+    
+    // Unmount all mounted apps
+    for (const app of this.mountedApps.values()) {
+      this.unmountApp(app);
+    }
   }
 
-  // FIXED: Method to handle navigation complete  
+  // Handle navigation complete
   async handleNavigationComplete() {
-    console.log('🔄 Navigation complete, clearing flag and re-evaluating');
+    console.log('🔄 Navigation complete - re-evaluating apps');
     this.isNavigating = false;
     
-    // Wait a bit for DOM to be fully ready
+    // Clear any stale container references
+    for (const app of this.apps) {
+      app.containerElement = null;
+    }
+    
+    // Wait for DOM to be ready and re-evaluate
     setTimeout(() => {
       this.evaluateApps();
-    }, 150);
+    }, 250);
   }
 
   getAppNames() {
@@ -306,35 +287,17 @@ class MiniSingleSPA {
 // Create global instance
 const miniSPA = new MiniSingleSPA();
 
-// Initialize Single-SPA with the same MFE registration but enhanced error handling
+// Initialize Single-SPA system
 function initSingleSPA() {
-  console.log('🔵 [DEBUG] Initializing Single-SPA system...');
+  console.log('🔵 Initializing Single-SPA system...');
 
   // Register the Header MFE (always active)
   miniSPA.registerApplication({
     name: 'header-mfe',
     loadApp: async () => {
-      console.log('🔵 [DEBUG] Starting Header MFE load process...');
+      console.log('🔵 Loading Header MFE...');
       
       try {
-        // Wait for container to be available with longer timeout
-        const containerSelector = 'header-mfe-container';
-        let container = null;
-        let attempts = 0;
-        const maxAttempts = 100; // 10 seconds total
-        
-        while (!container && attempts < maxAttempts) {
-          container = document.getElementById(containerSelector);
-          if (!container) {
-            await new Promise(resolve => setTimeout(resolve, 100));
-            attempts++;
-          }
-        }
-        
-        if (!container) {
-          throw new Error(`Container #${containerSelector} not found after ${maxAttempts * 100}ms`);
-        }
-        
         // Load React dependencies
         if (typeof window.React === 'undefined') {
           await new Promise((resolve, reject) => {
@@ -356,42 +319,41 @@ function initSingleSPA() {
           });
         }
         
-        // Test MFE URL accessibility
+        // Load MFE script
         const testUrl = 'http://localhost:8082/header-mfe.js';
         const testResponse = await fetch(testUrl, { method: 'HEAD' });
         if (!testResponse.ok) {
           throw new Error(`Header MFE server not accessible: ${testResponse.status}`);
         }
         
-        // Remove any existing script to force reload
-        const scriptId = 'header-mfe-script';
-        const existingScript = document.getElementById(scriptId);
+        // Remove existing script
+        const existingScript = document.getElementById('header-mfe-script');
         if (existingScript) {
           existingScript.remove();
         }
         
-        // Load fresh script with timestamp
+        // Load fresh script
         await new Promise((resolve, reject) => {
           const script = document.createElement('script');
-          script.id = scriptId;
+          script.id = 'header-mfe-script';
           script.src = testUrl + '?t=' + Date.now();
           script.onload = resolve;
           script.onerror = reject;
           document.head.appendChild(script);
         });
         
-        // Wait for global to be available
-        let globalAttempts = 0;
-        while (!window.headerMfe && globalAttempts < 20) {
+        // Wait for global
+        let attempts = 0;
+        while (!window.headerMfe && attempts < 20) {
           await new Promise(resolve => setTimeout(resolve, 100));
-          globalAttempts++;
+          attempts++;
         }
         
         if (!window.headerMfe) {
           throw new Error('Header MFE global not found');
         }
         
-        console.log('✅ [DEBUG] Header MFE loaded successfully');
+        console.log('✅ Header MFE loaded successfully');
         return window.headerMfe;
         
       } catch (error) {
@@ -405,61 +367,42 @@ function initSingleSPA() {
     }
   });
 
-  // Register TaskList MFE with same enhancements
+  // Register TaskList MFE
   miniSPA.registerApplication({
     name: 'tasklist-mfe',
     loadApp: async () => {
-      console.log('🔵 [DEBUG] Starting TaskList MFE load process...');
-      
       try {
-        const containerSelector = 'tasklist-mfe-container';
-        let container = null;
-        let attempts = 0;
-        
-        while (!container && attempts < 100) {
-          container = document.getElementById(containerSelector);
-          if (!container) {
-            await new Promise(resolve => setTimeout(resolve, 100));
-            attempts++;
-          }
-        }
-        
-        if (!container) {
-          throw new Error(`Container #${containerSelector} not found`);
-        }
-        
         const testUrl = 'http://localhost:8081/tasklist-mfe.js';
         const testResponse = await fetch(testUrl, { method: 'HEAD' });
         if (!testResponse.ok) {
           throw new Error(`TaskList MFE server not accessible: ${testResponse.status}`);
         }
         
-        const scriptId = 'tasklist-mfe-script';
-        const existingScript = document.getElementById(scriptId);
+        const existingScript = document.getElementById('tasklist-mfe-script');
         if (existingScript) {
           existingScript.remove();
         }
         
         await new Promise((resolve, reject) => {
           const script = document.createElement('script');
-          script.id = scriptId;
+          script.id = 'tasklist-mfe-script';
           script.src = testUrl + '?t=' + Date.now();
           script.onload = resolve;
           script.onerror = reject;
           document.head.appendChild(script);
         });
         
-        let attempts2 = 0;
-        while (!window.tasklistMfe && attempts2 < 20) {
+        let attempts = 0;
+        while (!window.tasklistMfe && attempts < 20) {
           await new Promise(resolve => setTimeout(resolve, 100));
-          attempts2++;
+          attempts++;
         }
         
         if (!window.tasklistMfe) {
           throw new Error('TaskList MFE global not found');
         }
         
-        console.log('✅ [DEBUG] TaskList MFE loaded successfully');
+        console.log('✅ TaskList MFE loaded successfully');
         return window.tasklistMfe;
         
       } catch (error) {
@@ -473,37 +416,18 @@ function initSingleSPA() {
     }
   });
 
-  // Register Login MFE with same enhancements
+  // Register Login MFE
   miniSPA.registerApplication({
     name: 'login-mfe',
     loadApp: async () => {
-      console.log('🔵 [DEBUG] Starting Login MFE load process...');
-      
       try {
-        const containerSelector = 'login-mfe-container';
-        let container = null;
-        let attempts = 0;
-        
-        while (!container && attempts < 100) {
-          container = document.getElementById(containerSelector);
-          if (!container) {
-            await new Promise(resolve => setTimeout(resolve, 100));
-            attempts++;
-          }
-        }
-        
-        if (!container) {
-          throw new Error(`Container #${containerSelector} not found`);
-        }
-        
         const testUrl = 'http://localhost:8083/login-mfe.js';
         const testResponse = await fetch(testUrl, { method: 'HEAD' });
         if (!testResponse.ok) {
           throw new Error(`Login MFE server not accessible: ${testResponse.status}`);
         }
         
-        const scriptId = 'login-mfe-script';
-        const existingScript = document.getElementById(scriptId);
+        const existingScript = document.getElementById('login-mfe-script');
         if (existingScript) {
           existingScript.remove();
         }
@@ -516,17 +440,17 @@ function initSingleSPA() {
           document.head.appendChild(script);
         });
         
-        let attempts2 = 0;
-        while (!window.loginMfe && attempts2 < 20) {
+        let attempts = 0;
+        while (!window.loginMfe && attempts < 20) {
           await new Promise(resolve => setTimeout(resolve, 100));
-          attempts2++;
+          attempts++;
         }
         
         if (!window.loginMfe) {
           throw new Error('Login MFE global not found');
         }
         
-        console.log('✅ [DEBUG] Login MFE loaded successfully');
+        console.log('✅ Login MFE loaded successfully');
         return window.loginMfe;
         
       } catch (error) {
@@ -541,69 +465,74 @@ function initSingleSPA() {
   });
 
   miniSPA.start();
-
-  // Make available globally for debugging
   window.miniSPA = miniSPA;
-  window.singleSpa = {
-    getAppNames: () => miniSPA.getAppNames(),
-    apps: miniSPA.apps
-  };
-
-  console.log('✅ [DEBUG] Single-SPA system fully initialized!');
+  console.log('✅ Single-SPA system fully initialized!');
 }
 
-// FIXED: Enhanced Turbo navigation handling
+// Turbo navigation handling - CRITICAL FIX
 function handleTurboNavigation() {
-  console.log('🟡 [DEBUG] Turbo navigation detected');
-  console.log('🟡 [DEBUG] Current path:', window.location.pathname);
+  console.log('🟡 Turbo navigation detected');
   
-  // Re-evaluate apps for new route
   if (window.miniSPA && window.miniSPA.started) {
-    console.log('🔵 [DEBUG] Re-evaluating apps for route:', window.location.pathname);
-    
-    // Mark navigation as complete and re-evaluate
+    console.log('🔵 Re-evaluating apps for route:', window.location.pathname);
     window.miniSPA.handleNavigationComplete();
   } else {
-    console.log('🔵 [DEBUG] Mini Single-SPA not ready, initializing...');
+    console.log('🔵 Mini Single-SPA not ready, initializing...');
     setTimeout(() => {
       initSingleSPA();
     }, 200);
   }
 }
 
-// FIXED: Handle Turbo navigation start
-document.addEventListener('turbo:before-cache', function() {
-  console.log('🔄 [DEBUG] Turbo before cache - page about to change');
+// CRITICAL: Handle Turbo navigation events properly
+document.addEventListener('turbo:before-cache', function(event) {
+  console.log('🔄 Turbo before cache - unmounting apps to prevent conflicts');
   if (window.miniSPA) {
     window.miniSPA.handleNavigationStart();
   }
 });
 
-// FIXED: Handle Turbo form submissions (logout, etc.)
 document.addEventListener('turbo:before-visit', function(event) {
-  console.log('🔄 [DEBUG] Turbo before visit:', event.detail.url);
+  console.log('🔄 Turbo before visit:', event.detail?.url);
   if (window.miniSPA) {
     window.miniSPA.handleNavigationStart();
   }
+});
+
+// Handle successful navigation
+document.addEventListener('turbo:load', handleTurboNavigation);
+
+// Handle navigation errors
+document.addEventListener('turbo:visit', function(event) {
+  console.log('🔄 Turbo visit event');
 });
 
 // Initialize on DOM ready
 document.addEventListener('DOMContentLoaded', function() {
-  console.log('🟢 [DEBUG] DOM loaded, initializing Single-SPA...');
+  console.log('🟢 DOM loaded, initializing Single-SPA...');
   setTimeout(() => {
     initSingleSPA();
   }, 100);
 });
 
-// Handle Turbo navigation properly
-document.addEventListener('turbo:load', handleTurboNavigation);
-
-// Handle browser back/forward buttons
+// Handle browser back/forward
 window.addEventListener('popstate', function() {
-  console.log('🔵 [DEBUG] Popstate detected, re-evaluating apps');
+  console.log('🔵 Popstate detected');
   if (window.miniSPA && window.miniSPA.started) {
     setTimeout(() => {
       window.miniSPA.evaluateApps();
     }, 100);
+  }
+});
+
+// Global error handler for debugging
+window.addEventListener('error', function(event) {
+  if (event.message && event.message.includes('replaceWith')) {
+    console.error('🔴 Turbo replaceWith error detected:', event);
+    // Force a page reload as fallback
+    setTimeout(() => {
+      console.log('🔄 Reloading page due to Turbo error...');
+      window.location.reload();
+    }, 10);
   }
 });

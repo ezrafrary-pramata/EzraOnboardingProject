@@ -283,7 +283,7 @@ class TaskList extends React.Component {
           border: '3px solid #1976d2'
         }
       }, [
-          React.createElement('div', { key: 'title' }, 'Tasklist'),
+        React.createElement('div', { key: 'title' }, '📋 TaskList Microfrontend (Port 8081)'),
         React.createElement('div', { 
           key: 'subtitle',
           style: { 
@@ -295,7 +295,7 @@ class TaskList extends React.Component {
             justifyContent: 'center'
           }
         }, [
-          '',
+          'Independent MFE • React Component • Click tasks to view details',
           this.getDataSourceBadge()
         ])
       ]),

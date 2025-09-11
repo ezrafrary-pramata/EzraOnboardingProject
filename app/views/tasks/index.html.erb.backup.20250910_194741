@@ -4,6 +4,10 @@
 
 <div style="max-width: 1200px; margin: 0 auto; padding: 20px;">
   <% if authenticated? %>
+    <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+      <h2>Welcome, <%= Current.user.email_address %></h2>
+      <p>Organization: <%= Current.user.organization&.name || "No organization assigned" %></p>
+    </div>
 
     <!-- New Task Button Section -->
     <div style="margin-bottom: 30px; text-align: center;">

@@ -38,8 +38,9 @@
     </style>
 </head>
 <body>
-    <h1>Tasklist</h1>
+    <h1>TaskList Microfrontend - Standalone Mode</h1>
     <div class="banner">
+        <strong>🚀 MFE Status:</strong> Running independently on port 8081<br>
         <small>This MFE can be integrated into the main Rails app or run standalone for development</small>
         
         <div class="debug">

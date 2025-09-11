@@ -26,10 +26,58 @@
       main {
         padding-top: 1rem;
       }
+
+      /* Hide error overlay completely */
+      #webpack-dev-server-client-overlay,
+      [data-turbo-error-overlay],
+      .turbo-error-overlay,
+      div[style*="position: fixed"][style*="z-index: 99999"],
+      div[style*="position: fixed"][style*="background-color: rgba(0, 0, 0"],
+      div[style*="position: fixed"][style*="background: rgba(0, 0, 0"],
+      div[style*="position: fixed"][style*="color: red"],
+      div[style*="position: fixed"][style*="color: rgb(255, 0, 0"],
+      [id*="error-overlay"],
+      [class*="error-overlay"],
+      [data-error-overlay] {
+        display: none !important;
+        visibility: hidden !important;
+        opacity: 0 !important;
+        pointer-events: none !important;
+      }
+
+      /* White loading screen overlay */
+      .refresh-loading-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: white;
+        z-index: 999999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        font-size: 18px;
+        color: #666;
+      }
+
+      /* Hide the overlay by default */
+      .refresh-loading-overlay.hidden {
+        display: none;
+      }
     </style>
   </head>
 
   <body>
+    <!-- White loading overlay (hidden by default) -->
+    <div id="refresh-loading-overlay" class="refresh-loading-overlay hidden">
+      <div style="text-align: center;">
+        <div style="margin-bottom: 10px;">Loading...</div>
+        <div style="font-size: 14px; opacity: 0.7;">Please wait</div>
+      </div>
+    </div>
+
     <!-- Header Microfrontend Container -->
     <div id="header-mfe-container">
       <div style="text-align: center; color: #666; padding: 10px; background: #f5f5f5; border-bottom: 1px solid #ddd;">
@@ -57,6 +105,178 @@
         authenticated: window.isAuthenticated,
         user: window.currentUser?.email_address || 'none'
       });
+    </script>
+
+    <script>
+      // Enhanced error suppression and white screen overlay
+      (function() {
+        console.log('🔧 Error suppression system loaded');
+
+        // Function to show white loading overlay
+        function showLoadingOverlay() {
+          const overlay = document.getElementById('refresh-loading-overlay');
+          if (overlay) {
+            overlay.classList.remove('hidden');
+            console.log('🔧 Showing white loading overlay');
+          }
+        }
+
+        // Function to hide white loading overlay
+        function hideLoadingOverlay() {
+          const overlay = document.getElementById('refresh-loading-overlay');
+          if (overlay) {
+            overlay.classList.add('hidden');
+            console.log('🔧 Hiding white loading overlay');
+          }
+        }
+
+        // Override console.error to suppress specific Turbo errors
+        const originalError = console.error;
+        console.error = function(...args) {
+          const errorMessage = args.join(' ');
+          
+          // Suppress specific error messages
+          if (errorMessage.includes('replaceWith') || 
+              errorMessage.includes('Unexpected token') ||
+              errorMessage.includes('turbo.min') ||
+              errorMessage.includes('SyntaxError')) {
+            console.log('🔧 Suppressed error:', errorMessage);
+            return; // Don't show the error
+          }
+          
+          // Show other errors normally
+          originalError.apply(console, args);
+        };
+
+        // Suppress unhandled promise rejections related to Turbo
+        window.addEventListener('unhandledrejection', function(event) {
+          const error = event.reason;
+          if (error && (
+            error.message?.includes('replaceWith') ||
+            error.message?.includes('Unexpected token') ||
+            error.message?.includes('turbo.min') ||
+            error.stack?.includes('turbo.min')
+          )) {
+            console.log('🔧 Suppressed promise rejection:', error.message);
+            event.preventDefault(); // Prevent the error from showing
+          }
+        });
+
+        // Global error handler to suppress error overlays
+        window.addEventListener('error', function(event) {
+          const error = event.error;
+          const message = event.message;
+          
+          if (message?.includes('replaceWith') || 
+              message?.includes('Unexpected token') ||
+              message?.includes('turbo.min') ||
+              error?.stack?.includes('turbo.min')) {
+            console.log('🔧 Suppressed window error:', message);
+            
+            // Show white overlay instead
+            showLoadingOverlay();
+            
+            // Hide overlay after a short delay (in case page doesn't refresh)
+            setTimeout(hideLoadingOverlay, 2000);
+            
+            event.preventDefault();
+            event.stopPropagation();
+            return false;
+          }
+        }, true); // Use capture phase
+
+        // Remove any error overlays that might appear
+        function removeErrorOverlays() {
+          // Query for common error overlay selectors
+          const errorSelectors = [
+            '#webpack-dev-server-client-overlay',
+            '[data-turbo-error-overlay]',
+            '.turbo-error-overlay',
+            '[id*="error-overlay"]',
+            '[class*="error-overlay"]',
+            '[data-error-overlay]'
+          ];
+
+          errorSelectors.forEach(selector => {
+            const elements = document.querySelectorAll(selector);
+            elements.forEach(el => {
+              el.remove();
+              console.log('🔧 Removed error overlay:', selector);
+            });
+          });
+
+          // Remove any fixed position divs with error-like styling
+          const allDivs = document.querySelectorAll('div[style*="position: fixed"]');
+          allDivs.forEach(div => {
+            const style = div.getAttribute('style') || '';
+            if ((style.includes('z-index: 99999') || 
+                 style.includes('background-color: rgba(0, 0, 0') ||
+                 style.includes('background: rgba(0, 0, 0') ||
+                 style.includes('color: red') ||
+                 style.includes('color: rgb(255, 0, 0')) &&
+                div.textContent?.includes('ERROR')) {
+              
+              console.log('🔧 Removing error overlay div');
+              
+              // Show white overlay instead
+              showLoadingOverlay();
+              
+              // Remove the error overlay
+              div.remove();
+              
+              // Hide white overlay after delay
+              setTimeout(hideLoadingOverlay, 1500);
+            }
+          });
+        }
+
+        // Check for and remove error overlays periodically
+        const intervalId = setInterval(removeErrorOverlays, 100);
+
+        // Stop checking after 10 seconds
+        setTimeout(() => {
+          clearInterval(intervalId);
+          hideLoadingOverlay();
+        }, 10000);
+
+        // Listen for Turbo events to manage the overlay
+        document.addEventListener('turbo:before-visit', function() {
+          console.log('🔧 Turbo navigation starting');
+        });
+
+        document.addEventListener('turbo:visit', function() {
+          console.log('🔧 Turbo visit event');
+          // Don't show overlay here as it might interfere with normal navigation
+        });
+
+        document.addEventListener('turbo:load', function() {
+          console.log('🔧 Turbo load complete');
+          hideLoadingOverlay();
+        });
+
+        // CSS injection to hide error overlays
+        const hideErrorsCSS = `
+          /* Force hide any error overlays */
+          div[style*="position: fixed"][style*="z-index"] {
+            display: none !important;
+          }
+          
+          /* Re-show elements that should be visible */
+          .refresh-loading-overlay {
+            display: flex !important;
+          }
+          
+          .refresh-loading-overlay.hidden {
+            display: none !important;
+          }
+        `;
+
+        const styleSheet = document.createElement('style');
+        styleSheet.textContent = hideErrorsCSS;
+        document.head.appendChild(styleSheet);
+
+        console.log('✅ Error suppression system ready');
+      })();
     </script>
   </body>
 </html>

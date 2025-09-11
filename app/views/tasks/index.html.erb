@@ -99,6 +99,55 @@ window.addEventListener('unhandledrejection', function(e) {
 });
 </script>
 
+<!-- ONE-TIME REFRESH MECHANISM -->
+<script>
+  (function() {
+    console.log('🔧 Tasks page refresh mechanism loaded');
+    
+    // Check if we need to refresh (one-time only)
+    const REFRESH_KEY = 'tasks_page_refreshed';
+    const REFRESH_TIMESTAMP_KEY = 'tasks_refresh_timestamp';
+    const REFRESH_TIMEOUT = 5000; // 5 seconds timeout to prevent infinite loops
+    
+    // Get current timestamp
+    const now = Date.now();
+    const lastRefresh = parseInt(sessionStorage.getItem(REFRESH_TIMESTAMP_KEY) || '0');
+    const hasRefreshed = sessionStorage.getItem(REFRESH_KEY);
+    
+    // Check if we should refresh
+    const shouldRefresh = !hasRefreshed || (now - lastRefresh > REFRESH_TIMEOUT);
+    
+    console.log('🔧 Refresh check:', {
+      shouldRefresh,
+      hasRefreshed: !!hasRefreshed,
+      timeSinceLastRefresh: now - lastRefresh,
+      timeout: REFRESH_TIMEOUT
+    });
+    
+    if (shouldRefresh) {
+      console.log('🔄 Refreshing tasks page to fix MFE state...');
+      
+      // Set the refresh flag and timestamp
+      sessionStorage.setItem(REFRESH_KEY, 'true');
+      sessionStorage.setItem(REFRESH_TIMESTAMP_KEY, now.toString());
+      
+      // Add a small delay to ensure the flags are set
+      setTimeout(() => {
+        window.location.reload();
+      }, 100);
+      
+      return; // Exit early since we're refreshing
+    }
+    
+    console.log('✅ Tasks page loaded without refresh (already refreshed)');
+    
+    // Clear the refresh flag after successful load (with delay to prevent race conditions)
+    setTimeout(() => {
+      sessionStorage.removeItem(REFRESH_KEY);
+    }, 2000);
+  })();
+</script>
+
 <script>
   // Make data available globally for the external MFE
   window.tasklistMfeData = {

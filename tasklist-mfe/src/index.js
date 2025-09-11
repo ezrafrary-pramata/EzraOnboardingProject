@@ -22,16 +22,8 @@ const lifecycles = singleSpaReact({
   rootComponent: TaskList,
   errorBoundary: (err, info, props) => {
     console.error('🔴 [MFE-DEBUG] TaskList MFE Error Boundary:', err);
-    return React.createElement('div', {
-      style: { 
-        color: 'red', 
-        padding: '20px',
-        border: '2px solid red',
-        borderRadius: '8px',
-        margin: '10px',
-        backgroundColor: '#ffebee'
-      }
-    }, [
+    // Return error UI
+    return React.createElement('div', { style: { padding: '20px', textAlign: 'center' } }, [
       React.createElement('h3', { key: 'title' }, '❌ TaskList MFE Error'),
       React.createElement('p', { key: 'message' }, err.message)
     ]);

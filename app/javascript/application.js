@@ -117,8 +117,8 @@ class MiniSingleSPA {
       // Store container reference
       app.containerElement = container;
       
-      // Clear container
-      container.innerHTML = '<div style="text-align: center; color: #666; padding: 20px;">Loading Microfrontend...</div>';
+      // Clear container - NO USER-VISIBLE LOADING MESSAGE
+      container.innerHTML = '';
       
       app.status = 'LOADING';
 
@@ -171,20 +171,11 @@ class MiniSingleSPA {
       console.error('❌ Error loading/mounting app:', app.name, error);
       app.status = 'LOAD_ERROR';
       
-      // Show error in UI
+      // REMOVED: User-visible error display
+      // Just clear the container silently
       const container = this.getDOMElement(app.customProps.domElement);
       if (container) {
-        container.innerHTML = `
-          <div style="background: #ffebee; border: 2px solid #f44336; border-radius: 8px; padding: 20px; margin: 10px 0;">
-            <h3 style="color: #d32f2f; margin: 0 0 10px 0;">❌ ${app.name} Error</h3>
-            <p style="color: #c62828; margin: 0; font-family: monospace; font-size: 12px;">
-              ${error.message}
-            </p>
-            <button onclick="window.location.reload()" style="margin-top: 10px; padding: 5px 10px; background: #d32f2f; color: white; border: none; border-radius: 4px; cursor: pointer;">
-              Refresh Page
-            </button>
-          </div>
-        `;
+        container.innerHTML = '';
       }
     }
   }
@@ -208,9 +199,9 @@ class MiniSingleSPA {
       app.mountedAt = null;
       this.mountedApps.delete(app.name);
       
-      // Clear container
+      // Clear container silently
       if (app.containerElement && document.contains(app.containerElement)) {
-        app.containerElement.innerHTML = '<div style="text-align: center; color: #666; padding: 10px;">Microfrontend Unloaded</div>';
+        app.containerElement.innerHTML = '';
       }
       
       console.log('✅ App unmounted successfully:', app.name);
@@ -525,14 +516,21 @@ window.addEventListener('popstate', function() {
   }
 });
 
-// Global error handler for debugging
+// REMOVED: User-visible error handlers
+// Global error handler for debugging only (console only)
 window.addEventListener('error', function(event) {
   if (event.message && event.message.includes('replaceWith')) {
     console.error('🔴 Turbo replaceWith error detected:', event);
-    // Force a page reload as fallback
-    setTimeout(() => {
-      console.log('🔄 Reloading page due to Turbo error...');
-      window.location.reload();
-    }, 10);
+    // REMOVED: Page reload to prevent jarring user experience
+    // Just log the error for debugging
   }
+});
+
+// REMOVED: Global error display
+// Still log errors for debugging but don't show to users
+window.addEventListener('unhandledrejection', function(e) {
+  console.error('🔴 Unhandled Promise Rejection:', {
+    reason: e.reason,
+    promise: e.promise
+  });
 });

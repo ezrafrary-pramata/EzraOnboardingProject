@@ -76,16 +76,8 @@ const lifecycles = singleSpaReact({
   },
   errorBoundary: (err, info, props) => {
     console.error('🔴 [MFE-DEBUG] Header MFE Error Boundary:', err);
-    return React.createElement('div', {
-      style: { 
-        color: 'red', 
-        padding: '20px',
-        border: '2px solid red',
-        borderRadius: '8px',
-        margin: '10px',
-        backgroundColor: '#ffebee'
-      }
-    }, [
+    // Return error UI with refresh button
+    return React.createElement('div', { style: { padding: '20px', textAlign: 'center' } }, [
       React.createElement('h3', { key: 'title' }, '❌ Header MFE Error'),
       React.createElement('p', { key: 'message' }, err.message),
       React.createElement('button', {

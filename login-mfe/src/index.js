@@ -43,16 +43,8 @@ const lifecycles = singleSpaReact({
   },
   errorBoundary: (err, info, props) => {
     console.error('🔴 [MFE-DEBUG] Login MFE Error Boundary:', err);
-    return React.createElement('div', {
-      style: { 
-        color: 'red', 
-        padding: '20px',
-        border: '2px solid red',
-        borderRadius: '8px',
-        margin: '10px',
-        backgroundColor: '#ffebee'
-      }
-    }, [
+    // Return error UI
+    return React.createElement('div', { style: { padding: '20px', textAlign: 'center' } }, [
       React.createElement('h3', { key: 'title' }, '❌ Login MFE Error'),
       React.createElement('p', { key: 'message' }, err.message)
     ]);

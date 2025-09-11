@@ -76,8 +76,8 @@ if (!window.singleSpaNavigate) {
     newPasswordPath: '/password/new',
     newUserPath: '/users/new',
     flashAlert: null,
-    flashNotice: 'Demo mode - form submission disabled',
-    emailValue: 'demo@example.com'
+    flashNotice: null,
+    emailValue: ''
   }));
   
   console.log('🔵 [MFE-DEBUG] Standalone mode mounted successfully');
